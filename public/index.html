@@ -171,8 +171,7 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
   <!-- 처음 연결 -->
   <form class="card connect" id="connectForm" hidden>
     <h2>공금통장 연결하기</h2>
-    <p class="hint">처음 한 번만 입력하면 이 기기에서 기억합니다.</p>
-    <div class="field" id="apiField"><label for="cApi">장부 주소 (구글 Apps Script URL)</label><input type="url" id="cApi" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"></div>
+    <p class="hint">가족 비밀번호를 한 번만 입력하면 이 기기에서 기억합니다.</p>
     <div class="field"><label for="cPass">가족 비밀번호</label><input type="password" id="cPass" autocomplete="current-password" required></div>
     <div class="err" id="connectErr" hidden></div>
     <div class="actions"><button type="submit" class="btn primary" id="connectBtn">연결</button></div>
@@ -250,7 +249,7 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
       <div class="actions"><button class="btn primary" id="saveSettings">설정 저장</button></div>
       <div class="card">
         <h2>이 기기 연결</h2>
-        <p class="hint">가족에게 보낼 링크를 복사하면 장부 주소가 미리 채워집니다. 비밀번호는 따로 알려 주세요.</p>
+        <p class="hint">가족에게 이 페이지 주소를 보내고, 비밀번호는 따로 알려 주세요.</p>
         <div class="actions" style="justify-content:flex-start">
           <button class="btn" id="copyInvite" type="button">가족 초대 링크 복사</button>
           <button class="btn danger" id="disconnect" type="button">이 기기에서 연결 해제</button>
@@ -268,7 +267,7 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
     in: ["회비", "이자", "기타 수입"],
     out: ["경조사", "식사·모임", "선물", "여행", "병원·돌봄", "기타 지출"],
   };
-  const LS_API = "ff.api", LS_PASS = "ff.pass";
+  const LS_PASS = "ff.pass";
   const $ = (id) => document.getElementById(id);
   const won = (n) => (Math.round(n) || 0).toLocaleString("ko-KR") + "원";
   const parseAmt = (s) => Number(String(s).replace(/[^\d]/g, "")) || 0;
@@ -287,7 +286,7 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
     del: (k) => { try { localStorage.removeItem(k); } catch {} },
   };
 
-  let apiUrl = store.get(LS_API), passcode = store.get(LS_PASS);
+  let passcode = store.get(LS_PASS);
   let settings = { members: [], monthlyDue: 0 };
   let txs = [];
   let loaded = false, busy = false;
@@ -296,10 +295,10 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
 
   // ---------- API ----------
   async function api(action, payload = {}) {
-    const res = await fetch(apiUrl, {
+    const res = await fetch("/api", {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action, passcode, ...payload }),
+      headers: { "Content-Type": "application/json", "X-Passcode": passcode },
+      body: JSON.stringify({ action, ...payload }),
     });
     const data = await res.json();
     if (!data.ok) { const e = new Error(data.error || "error"); e.code = data.error; throw e; }
@@ -311,8 +310,8 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
   }
   function explain(e) {
     if (e && e.code === "wrong_passcode") return "비밀번호가 맞지 않습니다.";
-    if (e && e.code === "passcode_not_set") return "장부 관리자가 Apps Script에서 비밀번호를 아직 정하지 않았습니다.";
-    if (e instanceof TypeError || (e && e.name === "SyntaxError")) return "장부 주소에 연결하지 못했습니다. 주소가 …/exec 로 끝나는지 확인해 주세요.";
+    if (e && e.code === "passcode_not_set") return "장부 관리자가 아직 가족 비밀번호를 정하지 않았습니다.";
+    if (e instanceof TypeError || (e && e.name === "SyntaxError")) return "서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.";
     return (e && e.message) || "알 수 없는 오류가 났습니다.";
   }
   async function write(action, payload, okMsg) {
@@ -323,7 +322,7 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
     finally { busy = false; }
   }
   async function refresh() {
-    if (!apiUrl || !passcode || busy || document.hidden) return;
+    if (!passcode || busy || document.hidden) return;
     try { await api("load"); notice(""); }
     catch (e) { if (e.code === "wrong_passcode") showConnect(explain(e)); else notice("장부를 새로 불러오지 못했습니다. " + explain(e)); }
   }
@@ -332,27 +331,20 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
   function showConnect(msg) {
     if (msg) { passcode = ""; store.del(LS_PASS); }
     $("app").hidden = true; $("connectForm").hidden = false;
-    $("cApi").value = apiUrl;
-    $("apiField").hidden = !!apiUrl && !msg;
     const err = $("connectErr"); err.textContent = msg || ""; err.hidden = !msg;
     $("cPass").focus();
   }
   $("connectForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const url = $("cApi").value.trim(), pass = $("cPass").value;
-    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) {
-      $("apiField").hidden = false;
-      $("connectErr").textContent = "장부 주소는 https://script.google.com/… 으로 시작해 /exec 로 끝나야 합니다."; $("connectErr").hidden = false; return;
-    }
-    apiUrl = url; passcode = pass;
+    passcode = $("cPass").value;
     $("connectBtn").disabled = true; $("connectBtn").textContent = "연결 중…";
     try {
       await api("load");
-      store.set(LS_API, apiUrl); store.set(LS_PASS, passcode);
+      store.set(LS_PASS, passcode);
       $("connectForm").hidden = true; $("app").hidden = false; $("cPass").value = "";
       toast("공금통장에 연결했습니다.");
     } catch (ex) {
-      $("apiField").hidden = false;
+      passcode = "";
       $("connectErr").textContent = explain(ex); $("connectErr").hidden = false;
     } finally { $("connectBtn").disabled = false; $("connectBtn").textContent = "연결"; }
   });
@@ -361,9 +353,9 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
     render(); showConnect();
   });
   $("copyInvite").addEventListener("click", async () => {
-    const link = location.origin + location.pathname + "#api=" + encodeURIComponent(apiUrl);
-    try { await navigator.clipboard.writeText(link); toast("초대 링크를 복사했습니다. 비밀번호는 따로 알려 주세요."); }
-    catch { window.prompt("아래 링크를 복사하세요", link); }
+    const link = location.origin + "/";
+    try { await navigator.clipboard.writeText(link); toast("페이지 주소를 복사했습니다. 비밀번호는 따로 알려 주세요."); }
+    catch { window.prompt("아래 주소를 복사하세요", link); }
   });
 
   // ---------- UI helpers ----------
@@ -622,13 +614,8 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
   });
 
   // ---------- boot ----------
-  const hashApi = new URLSearchParams(location.hash.slice(1)).get("api");
-  if (hashApi) {
-    if (hashApi !== apiUrl) { apiUrl = hashApi; passcode = ""; }
-    history.replaceState(null, "", location.pathname);
-  }
   render();
-  if (apiUrl && passcode) {
+  if (passcode) {
     $("app").hidden = false;
     refresh();
   } else {

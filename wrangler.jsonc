@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "family-fund",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "family-fund",
+      "database_id": "64722c4a-3a27-4aba-a60e-51736a538d63"
+    }
+  ],
+  "observability": { "enabled": true }
+}
