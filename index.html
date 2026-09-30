@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>우리집 공금통장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: passbook — balance cover on top, tabbed ledger pages below, one centered column up to 760px */
+:root {
+  --bg: #eef2f1;
+  --paper: #fbfcfc;
+  --ink: #1d2b2e;
+  --muted: #5d6f71;
+  --line: #d3dddc;
+  --accent: #1f6b5c;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcebe6;
+  --in: #2156a8;
+  --out: #b33a3a;
+  --warn-soft: #f7ecd9;
+  --warn-ink: #7a5412;
+  --f-display: "Gowun Batang", "Nanum Myeongjo", serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121a1b; --paper: #192324; --ink: #e3ebea; --muted: #97a9a8; --line: #2c3a3b;
+    --accent: #5fb8a2; --accent-ink: #0d1716; --accent-soft: #1f3632;
+    --in: #7fa9ec; --out: #ec8b8b; --warn-soft: #3a2f1c; --warn-ink: #e9c27d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121a1b; --paper: #192324; --ink: #e3ebea; --muted: #97a9a8; --line: #2c3a3b;
+  --accent: #5fb8a2; --accent-ink: #0d1716; --accent-soft: #1f3632;
+  --in: #7fa9ec; --out: #ec8b8b; --warn-soft: #3a2f1c; --warn-ink: #e9c27d;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 64px; display: flex; flex-direction: column; gap: 18px; }
+h1, h2 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* cover */
+.cover { background: var(--accent); color: var(--accent-ink); border-radius: 14px; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 14px; }
+.cover-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.cover h1 { font-size: 1.25rem; }
+.cover .acct { font-family: var(--f-num); font-size: .78rem; letter-spacing: .08em; opacity: .8; }
+.bal-label { font-size: .78rem; letter-spacing: .08em; opacity: .85; }
+.bal { font-family: var(--f-display); font-size: clamp(2rem, 8vw, 2.8rem); line-height: 1.1; }
+.bal small { font-size: .45em; margin-left: 4px; }
+.cover-stats { display: flex; gap: 22px; flex-wrap: wrap; font-size: .85rem; border-top: 1px solid color-mix(in srgb, var(--accent-ink) 25%, transparent); padding-top: 12px; }
+.cover-stats b { font-family: var(--f-num); font-weight: 500; margin-left: 6px; }
+
+.notice { background: var(--warn-soft); color: var(--warn-ink); border-radius: 10px; padding: 10px 14px; font-size: .88rem; }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { background: none; border: 0; padding: 10px 14px; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+.panel { display: flex; flex-direction: column; gap: 14px; }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 8px 14px; font-weight: 500; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: none; border-color: transparent; color: var(--muted); padding: 4px 8px; font-size: .82rem; }
+.btn.danger { color: var(--out); border-color: var(--out); background: none; padding: 4px 8px; font-size: .82rem; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ledger */
+.ledger-wrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+table.ledger { width: 100%; border-collapse: collapse; min-width: 560px; font-size: .9rem; }
+.ledger th { text-align: left; font-weight: 500; font-size: .75rem; letter-spacing: .06em; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--accent-soft); }
+.ledger td { padding: 10px 12px; border-bottom: 1px dashed var(--line); vertical-align: top; }
+.ledger tr:last-child td { border-bottom: 0; }
+.ledger .r { text-align: right; }
+.ledger .in { color: var(--in); }
+.ledger .out { color: var(--out); }
+.ledger .memo { color: var(--muted); font-size: .8rem; }
+.chip { display: inline-block; font-size: .72rem; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--ink); margin-right: 6px; }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+
+/* form */
+.sheet { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.sheet h2 { font-size: 1.05rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: .78rem; color: var(--muted); letter-spacing: .04em; }
+.field input, .field select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; width: 100%; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--bg); padding: 8px; }
+.seg button[aria-pressed="true"].t-in { background: var(--in); color: var(--paper); }
+.seg button[aria-pressed="true"].t-out { background: var(--out); color: var(--paper); }
+.actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.err { color: var(--out); font-size: .85rem; }
+
+/* dues */
+.dues-wrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+table.dues { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .88rem; }
+.dues th, .dues td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--line); }
+.dues th { font-weight: 500; font-size: .75rem; color: var(--muted); background: var(--accent-soft); }
+.dues td.name { text-align: left; padding-left: 12px; font-weight: 500; white-space: nowrap; }
+.cell { border: 1px solid var(--line); background: none; border-radius: 6px; padding: 4px 8px; font-size: .78rem; min-width: 52px; }
+.cell.paid { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.cell.part { background: var(--warn-soft); border-color: var(--warn-soft); color: var(--warn-ink); }
+.cell.unpaid { color: var(--muted); border-style: dashed; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
+
+/* stats */
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { font-size: 1rem; }
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; font-size: .82rem; }
+.bar-pair { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bar { height: 10px; border-radius: 3px; min-width: 2px; }
+.bar.in { background: var(--in); }
+.bar.out { background: var(--out); }
+.bar.cat { background: var(--accent); }
+.bar-line { display: flex; align-items: center; gap: 8px; }
+.bar-line span { font-family: var(--f-num); font-size: .75rem; color: var(--muted); white-space: nowrap; }
+.cat-row { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center; font-size: .85rem; }
+
+/* settings */
+.members { display: flex; flex-direction: column; gap: 8px; }
+.member-row { display: flex; gap: 8px; align-items: center; }
+.member-row input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.hint { font-size: .8rem; color: var(--muted); margin: 0; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: .88rem; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: no-preference) { .toast { transition: opacity .2s; } }
+</style>
+<style>
+html { color-scheme: light; }
+body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+.sync { font-size: .75rem; opacity: .8; }
+.connect { max-width: 460px; }
+.connect ol { margin: 0; padding-left: 20px; font-size: .88rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="cover" aria-label="잔액">
+    <div class="cover-top">
+      <h1>우리집 공금통장</h1>
+      <span class="acct">가족 7인 · 공동관리</span>
+    </div>
+    <div>
+      <div class="bal-label">현재 잔액</div>
+      <div class="bal" id="balance">—<small>원</small></div>
+    </div>
+    <div class="cover-stats">
+      <span>이번 달 입금<b id="mIn">0원</b></span>
+      <span>이번 달 출금<b id="mOut">0원</b></span>
+      <span>이번 달 회비<b id="mDues">0/0명</b></span>
+      <span class="sync" id="sync"></span>
+    </div>
+  </section>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <!-- 처음 연결 -->
+  <form class="card connect" id="connectForm" hidden>
+    <h2>공금통장 연결하기</h2>
+    <p class="hint">처음 한 번만 입력하면 이 기기에서 기억합니다.</p>
+    <div class="field" id="apiField"><label for="cApi">장부 주소 (구글 Apps Script URL)</label><input type="url" id="cApi" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"></div>
+    <div class="field"><label for="cPass">가족 비밀번호</label><input type="password" id="cPass" autocomplete="current-password" required></div>
+    <div class="err" id="connectErr" hidden></div>
+    <div class="actions"><button type="submit" class="btn primary" id="connectBtn">연결</button></div>
+  </form>
+
+  <div id="app" hidden>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-ledger" data-tab="ledger" aria-selected="true">거래내역</button>
+      <button class="tab" role="tab" id="tab-dues" data-tab="dues" aria-selected="false">회비 현황</button>
+      <button class="tab" role="tab" id="tab-stats" data-tab="stats" aria-selected="false">통계</button>
+      <button class="tab" role="tab" id="tab-settings" data-tab="settings" aria-selected="false">설정</button>
+    </nav>
+
+    <form class="sheet" id="txForm" hidden style="margin-top:14px">
+      <h2 id="formTitle">거래 기록하기</h2>
+      <div class="seg" role="group" aria-label="구분">
+        <button type="button" class="t-in" id="typeIn" aria-pressed="true">입금 (맡기신 금액)</button>
+        <button type="button" class="t-out" id="typeOut" aria-pressed="false">출금 (찾으신 금액)</button>
+      </div>
+      <div class="grid">
+        <div class="field"><label for="fDate">날짜</label><input type="date" id="fDate" required></div>
+        <div class="field"><label for="fAmount">금액 (원)</label><input type="text" inputmode="numeric" id="fAmount" placeholder="50,000" required></div>
+        <div class="field"><label for="fCat">분류</label><select id="fCat"></select></div>
+        <div class="field"><label for="fMember" id="fMemberLabel">입금한 사람</label><select id="fMember"></select></div>
+        <div class="field" id="fMonthWrap"><label for="fMonth">회비 해당 월</label><input type="month" id="fMonth"></div>
+      </div>
+      <div class="field"><label for="fMemo">적요 (메모)</label><input type="text" id="fMemo" maxlength="80" placeholder="예: 할머니 생신 케이크"></div>
+      <div class="err" id="formErr" hidden></div>
+      <div class="actions">
+        <button type="button" class="btn" id="cancelForm">취소</button>
+        <button type="submit" class="btn primary" id="saveTx">기록하기</button>
+      </div>
+    </form>
+
+    <section class="panel" id="panel-ledger" role="tabpanel" aria-labelledby="tab-ledger" style="margin-top:14px">
+      <div class="row-between">
+        <span class="hint" id="ledgerCount">거래 0건</span>
+        <div class="actions">
+          <button class="btn" id="exportCsv" hidden>엑셀용 CSV 받기</button>
+          <button class="btn primary" id="openForm">+ 거래 기록</button>
+        </div>
+      </div>
+      <div class="ledger-wrap">
+        <table class="ledger">
+          <thead><tr><th>날짜</th><th>적요</th><th class="r">찾으신 금액</th><th class="r">맡기신 금액</th><th class="r">잔액</th><th></th></tr></thead>
+          <tbody id="ledgerBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-dues" role="tabpanel" aria-labelledby="tab-dues" hidden style="margin-top:14px">
+      <div class="row-between">
+        <span class="hint" id="duesHint">월 회비 0원</span>
+        <div class="legend"><span>■ 납부 완료</span><span>◧ 일부 납부</span><span>□ 미납 (눌러서 기록)</span></div>
+      </div>
+      <div class="dues-wrap"><table class="dues"><thead id="duesHead"></thead><tbody id="duesBody"></tbody></table></div>
+    </section>
+
+    <section class="panel" id="panel-stats" role="tabpanel" aria-labelledby="tab-stats" hidden style="margin-top:14px">
+      <div class="card"><h2>최근 6개월 입출금</h2><div class="bars" id="monthBars"></div></div>
+      <div class="card"><h2>최근 6개월 지출 분류</h2><div class="bars" id="catBars"></div></div>
+    </section>
+
+    <section class="panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden style="margin-top:14px">
+      <div class="card">
+        <h2>가족 구성원</h2>
+        <p class="hint">회비 현황표와 입금자 목록에 쓰입니다. 7명을 모두 적어 주세요.</p>
+        <div class="members" id="memberList"></div>
+        <div><button class="btn" id="addMember" type="button">+ 구성원 추가</button></div>
+      </div>
+      <div class="card">
+        <h2>월 회비</h2>
+        <div class="field" style="max-width:240px"><label for="sDue">1인당 매월 (원)</label><input type="text" inputmode="numeric" id="sDue" placeholder="100,000"></div>
+      </div>
+      <div class="actions"><button class="btn primary" id="saveSettings">설정 저장</button></div>
+      <div class="card">
+        <h2>이 기기 연결</h2>
+        <p class="hint">가족에게 보낼 링크를 복사하면 장부 주소가 미리 채워집니다. 비밀번호는 따로 알려 주세요.</p>
+        <div class="actions" style="justify-content:flex-start">
+          <button class="btn" id="copyInvite" type="button">가족 초대 링크 복사</button>
+          <button class="btn danger" id="disconnect" type="button">이 기기에서 연결 해제</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const CATS = {
+    in: ["회비", "이자", "기타 수입"],
+    out: ["경조사", "식사·모임", "선물", "여행", "병원·돌봄", "기타 지출"],
+  };
+  const LS_API = "ff.api", LS_PASS = "ff.pass";
+  const $ = (id) => document.getElementById(id);
+  const won = (n) => (Math.round(n) || 0).toLocaleString("ko-KR") + "원";
+  const parseAmt = (s) => Number(String(s).replace(/[^\d]/g, "")) || 0;
+  const pad = (n) => String(n).padStart(2, "0");
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const thisMonth = () => today().slice(0, 7);
+  const lastMonths = (n) => {
+    const d = new Date(); const out = [];
+    for (let i = n - 1; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); out.push(`${x.getFullYear()}-${pad(x.getMonth() + 1)}`); }
+    return out;
+  };
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const store = {
+    get: (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+    set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+    del: (k) => { try { localStorage.removeItem(k); } catch {} },
+  };
+
+  let apiUrl = store.get(LS_API), passcode = store.get(LS_PASS);
+  let settings = { members: [], monthlyDue: 0 };
+  let txs = [];
+  let loaded = false, busy = false;
+  let formType = "in";
+  let draftMembers = null;
+
+  // ---------- API ----------
+  async function api(action, payload = {}) {
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, passcode, ...payload }),
+    });
+    const data = await res.json();
+    if (!data.ok) { const e = new Error(data.error || "error"); e.code = data.error; throw e; }
+    settings = data.settings; txs = data.txs; loaded = true;
+    $("sync").textContent = "동기화 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+    fillMemberSelect(); render();
+    if (!$("panel-settings").hidden && !draftMembers) renderSettings();
+    return data;
+  }
+  function explain(e) {
+    if (e && e.code === "wrong_passcode") return "비밀번호가 맞지 않습니다.";
+    if (e && e.code === "passcode_not_set") return "장부 관리자가 Apps Script에서 비밀번호를 아직 정하지 않았습니다.";
+    if (e instanceof TypeError || (e && e.name === "SyntaxError")) return "장부 주소에 연결하지 못했습니다. 주소가 …/exec 로 끝나는지 확인해 주세요.";
+    return (e && e.message) || "알 수 없는 오류가 났습니다.";
+  }
+  async function write(action, payload, okMsg) {
+    if (busy) return false;
+    busy = true;
+    try { await api(action, payload); if (okMsg) toast(okMsg); return true; }
+    catch (e) { if (e.code === "wrong_passcode") { showConnect(explain(e)); } else toast(explain(e)); return false; }
+    finally { busy = false; }
+  }
+  async function refresh() {
+    if (!apiUrl || !passcode || busy || document.hidden) return;
+    try { await api("load"); notice(""); }
+    catch (e) { if (e.code === "wrong_passcode") showConnect(explain(e)); else notice("장부를 새로 불러오지 못했습니다. " + explain(e)); }
+  }
+
+  // ---------- connect ----------
+  function showConnect(msg) {
+    if (msg) { passcode = ""; store.del(LS_PASS); }
+    $("app").hidden = true; $("connectForm").hidden = false;
+    $("cApi").value = apiUrl;
+    $("apiField").hidden = !!apiUrl && !msg;
+    const err = $("connectErr"); err.textContent = msg || ""; err.hidden = !msg;
+    $("cPass").focus();
+  }
+  $("connectForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const url = $("cApi").value.trim(), pass = $("cPass").value;
+    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) {
+      $("apiField").hidden = false;
+      $("connectErr").textContent = "장부 주소는 https://script.google.com/… 으로 시작해 /exec 로 끝나야 합니다."; $("connectErr").hidden = false; return;
+    }
+    apiUrl = url; passcode = pass;
+    $("connectBtn").disabled = true; $("connectBtn").textContent = "연결 중…";
+    try {
+      await api("load");
+      store.set(LS_API, apiUrl); store.set(LS_PASS, passcode);
+      $("connectForm").hidden = true; $("app").hidden = false; $("cPass").value = "";
+      toast("공금통장에 연결했습니다.");
+    } catch (ex) {
+      $("apiField").hidden = false;
+      $("connectErr").textContent = explain(ex); $("connectErr").hidden = false;
+    } finally { $("connectBtn").disabled = false; $("connectBtn").textContent = "연결"; }
+  });
+  $("disconnect").addEventListener("click", () => {
+    store.del(LS_PASS); passcode = ""; loaded = false; txs = []; settings = { members: [], monthlyDue: 0 };
+    render(); showConnect();
+  });
+  $("copyInvite").addEventListener("click", async () => {
+    const link = location.origin + location.pathname + "#api=" + encodeURIComponent(apiUrl);
+    try { await navigator.clipboard.writeText(link); toast("초대 링크를 복사했습니다. 비밀번호는 따로 알려 주세요."); }
+    catch { window.prompt("아래 링크를 복사하세요", link); }
+  });
+
+  // ---------- UI helpers ----------
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+  function notice(msg) { const n = $("notice"); n.textContent = msg || ""; n.hidden = !msg; }
+
+  // ---------- tabs ----------
+  document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+    ["ledger", "dues", "stats", "settings"].forEach((k) => { $("panel-" + k).hidden = k !== b.dataset.tab; });
+    if (b.dataset.tab === "settings") renderSettings();
+  }));
+
+  // ---------- form ----------
+  function fillMemberSelect() {
+    const sel = $("fMember"); const cur = sel.value;
+    sel.innerHTML = "";
+    const none = document.createElement("option"); none.value = ""; none.textContent = "선택 안 함"; sel.appendChild(none);
+    settings.members.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = m.name; sel.appendChild(o); });
+    sel.value = cur;
+  }
+  function setType(t) {
+    formType = t;
+    $("typeIn").setAttribute("aria-pressed", String(t === "in"));
+    $("typeOut").setAttribute("aria-pressed", String(t === "out"));
+    const sel = $("fCat"); sel.innerHTML = "";
+    CATS[t].forEach((c) => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
+    $("fMemberLabel").textContent = t === "in" ? "입금한 사람" : "사용한 사람";
+    syncMonthField();
+  }
+  function syncMonthField() { $("fMonthWrap").hidden = !(formType === "in" && $("fCat").value === "회비"); }
+  $("typeIn").addEventListener("click", () => setType("in"));
+  $("typeOut").addEventListener("click", () => setType("out"));
+  $("fCat").addEventListener("change", syncMonthField);
+  $("fAmount").addEventListener("input", (e) => { const n = parseAmt(e.target.value); e.target.value = n ? n.toLocaleString("ko-KR") : ""; });
+
+  function openForm(preset = {}) {
+    fillMemberSelect();
+    setType(preset.type || "in");
+    $("fDate").value = today();
+    $("fAmount").value = preset.amount ? preset.amount.toLocaleString("ko-KR") : "";
+    if (preset.category) $("fCat").value = preset.category;
+    $("fMember").value = preset.memberId || "";
+    $("fMonth").value = preset.month || thisMonth();
+    $("fMemo").value = preset.memo || "";
+    $("formErr").hidden = true;
+    syncMonthField();
+    $("txForm").hidden = false;
+    $("txForm").scrollIntoView({ block: "nearest" });
+    $("fAmount").focus();
+  }
+  $("openForm").addEventListener("click", () => openForm());
+  $("cancelForm").addEventListener("click", () => { $("txForm").hidden = true; });
+
+  $("txForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const amount = parseAmt($("fAmount").value);
+    const err = $("formErr");
+    if (!amount) { err.textContent = "금액을 입력해 주세요."; err.hidden = false; return; }
+    if (!$("fDate").value) { err.textContent = "날짜를 골라 주세요."; err.hidden = false; return; }
+    const category = $("fCat").value;
+    const isDues = formType === "in" && category === "회비";
+    if (isDues && !$("fMember").value) { err.textContent = "회비는 입금한 사람을 골라 주세요."; err.hidden = false; return; }
+    const tx = {
+      date: $("fDate").value, type: formType, amount, category,
+      memberId: $("fMember").value || null,
+      month: isDues ? ($("fMonth").value || thisMonth()) : null,
+      memo: $("fMemo").value.trim(),
+    };
+    $("saveTx").disabled = true; $("saveTx").textContent = "기록 중…";
+    const ok = await write("addTx", { tx }, formType === "in" ? `${won(amount)} 입금을 기록했습니다.` : `${won(amount)} 출금을 기록했습니다.`);
+    $("saveTx").disabled = false; $("saveTx").textContent = "기록하기";
+    if (ok) $("txForm").hidden = true;
+  });
+
+  // ---------- derived ----------
+  const memberName = (id) => (settings.members.find((m) => m.id === id) || {}).name || "";
+  function sortedAsc() {
+    return [...txs].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt || 0) - (b.createdAt || 0)));
+  }
+  function duesPaid(memberId, month) {
+    return txs.filter((t) => t.type === "in" && t.category === "회비" && t.memberId === memberId && t.month === month)
+      .reduce((s, t) => s + t.amount, 0);
+  }
+
+  // ---------- render ----------
+  function render() {
+    const asc = sortedAsc();
+    let bal = 0; const running = new Map();
+    asc.forEach((t) => { bal += t.type === "in" ? t.amount : -t.amount; running.set(t.id, bal); });
+    $("balance").innerHTML = ""; $("balance").append(loaded ? bal.toLocaleString("ko-KR") : "—");
+    const sm = document.createElement("small"); sm.textContent = "원"; $("balance").append(sm);
+
+    const m = thisMonth();
+    const inM = txs.filter((t) => t.date.startsWith(m) && t.type === "in").reduce((s, t) => s + t.amount, 0);
+    const outM = txs.filter((t) => t.date.startsWith(m) && t.type === "out").reduce((s, t) => s + t.amount, 0);
+    $("mIn").textContent = won(inM); $("mOut").textContent = won(outM);
+    const due = settings.monthlyDue || 0;
+    const paidCount = settings.members.filter((mb) => due > 0 && duesPaid(mb.id, m) >= due).length;
+    $("mDues").textContent = `${paidCount}/${settings.members.length}명`;
+
+    renderLedger(asc, running);
+    renderDues();
+    renderStats();
+  }
+
+  function renderLedger(asc, running) {
+    const body = $("ledgerBody"); body.innerHTML = "";
+    $("ledgerCount").textContent = `거래 ${txs.length}건`;
+    $("exportCsv").hidden = !txs.length;
+    if (!txs.length) {
+      const tr = document.createElement("tr"); const td = document.createElement("td");
+      td.colSpan = 6; td.className = "empty";
+      td.textContent = loaded ? "아직 기록이 없습니다. ‘+ 거래 기록’으로 첫 입금을 적어 보세요." : "장부를 불러오는 중입니다…";
+      tr.appendChild(td); body.appendChild(tr); return;
+    }
+    [...asc].reverse().forEach((t) => {
+      const tr = document.createElement("tr");
+      const dTd = document.createElement("td"); dTd.className = "num"; dTd.textContent = t.date.slice(2).replace(/-/g, ".");
+      const sTd = document.createElement("td");
+      const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = t.category; sTd.appendChild(chip);
+      const who = memberName(t.memberId);
+      const label = t.category === "회비" && t.month ? `${who || "?"} ${Number(t.month.slice(5))}월분` : who;
+      if (label) sTd.append(label);
+      if (t.memo) { const mm = document.createElement("div"); mm.className = "memo"; mm.textContent = t.memo; sTd.appendChild(mm); }
+      const oTd = document.createElement("td"); oTd.className = "r num out"; oTd.textContent = t.type === "out" ? t.amount.toLocaleString("ko-KR") : "";
+      const iTd = document.createElement("td"); iTd.className = "r num in"; iTd.textContent = t.type === "in" ? t.amount.toLocaleString("ko-KR") : "";
+      const bTd = document.createElement("td"); bTd.className = "r num"; bTd.textContent = running.get(t.id).toLocaleString("ko-KR");
+      const xTd = document.createElement("td"); xTd.className = "r";
+      const del = document.createElement("button"); del.className = "btn ghost"; del.textContent = "삭제"; del.type = "button";
+      let armed = false, timer;
+      del.addEventListener("click", async () => {
+        if (!armed) { armed = true; del.className = "btn danger"; del.textContent = "정말 삭제"; timer = setTimeout(() => { armed = false; del.className = "btn ghost"; del.textContent = "삭제"; }, 3000); return; }
+        clearTimeout(timer); del.disabled = true;
+        const ok = await write("deleteTx", { id: t.id }, "기록을 삭제했습니다.");
+        if (!ok) del.disabled = false;
+      });
+      xTd.appendChild(del);
+      tr.append(dTd, sTd, oTd, iTd, bTd, xTd); body.appendChild(tr);
+    });
+  }
+
+  function renderDues() {
+    const months = lastMonths(6); const due = settings.monthlyDue || 0;
+    $("duesHint").textContent = due ? `1인당 월 회비 ${won(due)}` : "설정 탭에서 월 회비를 정해 주세요.";
+    const head = $("duesHead"); head.innerHTML = "";
+    const hr = document.createElement("tr"); const h0 = document.createElement("th"); h0.textContent = "이름"; hr.appendChild(h0);
+    months.forEach((mo) => { const th = document.createElement("th"); th.textContent = `${mo.slice(2, 4)}.${mo.slice(5)}`; hr.appendChild(th); });
+    head.appendChild(hr);
+    const body = $("duesBody"); body.innerHTML = "";
+    if (!settings.members.length) {
+      const tr = document.createElement("tr"); const td = document.createElement("td"); td.colSpan = 7; td.className = "empty";
+      td.textContent = "설정 탭에서 가족 7명의 이름을 먼저 등록해 주세요."; tr.appendChild(td); body.appendChild(tr); return;
+    }
+    settings.members.forEach((mb) => {
+      const tr = document.createElement("tr");
+      const nt = document.createElement("td"); nt.className = "name"; nt.textContent = mb.name; tr.appendChild(nt);
+      months.forEach((mo) => {
+        const td = document.createElement("td"); const paid = duesPaid(mb.id, mo);
+        const b = document.createElement("button"); b.type = "button"; b.className = "cell num";
+        if (due && paid >= due) { b.classList.add("paid"); b.textContent = "완료"; b.title = won(paid); }
+        else if (paid > 0) { b.classList.add("part"); b.textContent = (paid / 10000).toLocaleString("ko-KR") + "만"; b.title = `${won(paid)} / ${won(due)}`; }
+        else { b.classList.add("unpaid"); b.textContent = "미납"; }
+        b.setAttribute("aria-label", `${mb.name} ${mo} 회비 ${b.textContent}`);
+        const remain = Math.max(due - paid, 0);
+        b.disabled = !!(due && paid >= due);
+        b.addEventListener("click", () => openForm({ type: "in", category: "회비", memberId: mb.id, month: mo, amount: remain || due }));
+        td.appendChild(b); tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  function renderStats() {
+    const months = lastMonths(6);
+    const data = months.map((mo) => ({
+      mo,
+      inn: txs.filter((t) => t.type === "in" && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
+      out: txs.filter((t) => t.type === "out" && t.date.startsWith(mo)).reduce((s, t) => s + t.amount, 0),
+    }));
+    const max = Math.max(1, ...data.map((d) => Math.max(d.inn, d.out)));
+    const mb = $("monthBars"); mb.innerHTML = "";
+    data.forEach((d) => {
+      const row = document.createElement("div"); row.className = "bar-row";
+      const lab = document.createElement("div"); lab.className = "num"; lab.textContent = `${d.mo.slice(2, 4)}.${d.mo.slice(5)}`;
+      const pair = document.createElement("div"); pair.className = "bar-pair";
+      [["in", d.inn, "입금"], ["out", d.out, "출금"]].forEach(([k, v, name]) => {
+        const line = document.createElement("div"); line.className = "bar-line";
+        const bar = document.createElement("div"); bar.className = "bar " + k; bar.style.width = `${(v / max) * 75}%`;
+        const val = document.createElement("span"); val.textContent = `${name} ${won(v)}`;
+        line.append(bar, val); pair.appendChild(line);
+      });
+      row.append(lab, pair); mb.appendChild(row);
+    });
+
+    const since = months[0];
+    const cats = {};
+    txs.filter((t) => t.type === "out" && t.date.slice(0, 7) >= since).forEach((t) => { cats[t.category] = (cats[t.category] || 0) + t.amount; });
+    const entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+    const cb = $("catBars"); cb.innerHTML = "";
+    if (!entries.length) { const p = document.createElement("p"); p.className = "hint"; p.textContent = "최근 6개월 동안 출금 기록이 없습니다."; cb.appendChild(p); return; }
+    const cmax = entries[0][1];
+    entries.forEach(([c, v]) => {
+      const row = document.createElement("div"); row.className = "cat-row";
+      const lab = document.createElement("div"); lab.textContent = c;
+      const line = document.createElement("div"); line.className = "bar-line";
+      const bar = document.createElement("div"); bar.className = "bar cat"; bar.style.width = `${(v / cmax) * 70}%`;
+      const val = document.createElement("span"); val.textContent = won(v);
+      line.append(bar, val); row.append(lab, line); cb.appendChild(row);
+    });
+  }
+
+  // ---------- settings ----------
+  function renderSettings() {
+    if (!draftMembers) draftMembers = settings.members.map((m) => ({ ...m }));
+    if (!draftMembers.length) draftMembers = Array.from({ length: 7 }, () => ({ id: uid(), name: "" }));
+    const list = $("memberList"); list.innerHTML = "";
+    draftMembers.forEach((m, i) => {
+      const row = document.createElement("div"); row.className = "member-row";
+      const inp = document.createElement("input"); inp.id = "member-" + m.id; inp.value = m.name; inp.placeholder = `구성원 ${i + 1} 이름`; inp.maxLength = 20;
+      inp.setAttribute("aria-label", `구성원 ${i + 1} 이름`);
+      inp.addEventListener("input", () => { m.name = inp.value; });
+      const rm = document.createElement("button"); rm.type = "button"; rm.className = "btn ghost"; rm.textContent = "빼기";
+      rm.addEventListener("click", () => { draftMembers.splice(i, 1); renderSettings(); });
+      row.append(inp, rm); list.appendChild(row);
+    });
+    if (settings.monthlyDue) $("sDue").value = settings.monthlyDue.toLocaleString("ko-KR");
+  }
+  $("addMember").addEventListener("click", () => { draftMembers.push({ id: uid(), name: "" }); renderSettings(); });
+  $("sDue").addEventListener("input", (e) => { const n = parseAmt(e.target.value); e.target.value = n ? n.toLocaleString("ko-KR") : ""; });
+  $("saveSettings").addEventListener("click", async () => {
+    const members = draftMembers.filter((m) => m.name.trim()).map((m) => ({ id: m.id, name: m.name.trim() }));
+    $("saveSettings").disabled = true;
+    const ok = await write("saveSettings", { settings: { members, monthlyDue: parseAmt($("sDue").value) } }, "설정을 저장했습니다.");
+    $("saveSettings").disabled = false;
+    if (ok) { draftMembers = null; renderSettings(); }
+  });
+
+  // ---------- CSV ----------
+  $("exportCsv").addEventListener("click", () => {
+    const q = (s) => `"${String(s ?? "").replace(/"/g, '""')}"`;
+    let bal = 0;
+    const lines = [["날짜", "구분", "분류", "구성원", "회비 월", "적요", "출금", "입금", "잔액"].map(q).join(",")];
+    sortedAsc().forEach((t) => {
+      bal += t.type === "in" ? t.amount : -t.amount;
+      lines.push([t.date, t.type === "in" ? "입금" : "출금", t.category, memberName(t.memberId), t.month || "", t.memo,
+        t.type === "out" ? t.amount : "", t.type === "in" ? t.amount : "", bal].map(q).join(","));
+    });
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `공금통장_${today()}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // ---------- boot ----------
+  const hashApi = new URLSearchParams(location.hash.slice(1)).get("api");
+  if (hashApi) {
+    if (hashApi !== apiUrl) { apiUrl = hashApi; passcode = ""; }
+    history.replaceState(null, "", location.pathname);
+  }
+  render();
+  if (apiUrl && passcode) {
+    $("app").hidden = false;
+    refresh();
+  } else {
+    showConnect();
+  }
+  setInterval(refresh, 60000);
+  document.addEventListener("visibilitychange", refresh);
+})();
+</script>
+</body>
+</html>
