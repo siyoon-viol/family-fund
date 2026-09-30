@@ -4,160 +4,241 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>우리집 공금통장</title>
+<meta name="theme-color" content="#ffe4eb">
+<title>우리집 공금 저금통</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='30' cy='36' rx='24' ry='18' fill='%23f7a8bb'/%3E%3Cpath d='M38 22 42 10 49 22Z' fill='%23ee8aa3'/%3E%3Cellipse cx='54' cy='37' rx='7' ry='6' fill='%23ee8aa3'/%3E%3Ccircle cx='44' cy='31' r='2.4' fill='%234a2b35'/%3E%3Crect x='24' y='19' width='12' height='3.5' rx='1.7' fill='%23ee8aa3'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=Nunito:wght@600;800&display=swap">
 <style>
-/* Layout: passbook — balance cover on top, tabbed ledger pages below, one centered column up to 760px */
+/* Layout: 돼지 저금통 — 분홍 저금통 표지(잔액 + 돼지) 아래로 둥근 탭과 장부 카드, 가운데 한 줄 760px */
 :root {
-  --bg: #eef2f1;
-  --paper: #fbfcfc;
-  --ink: #1d2b2e;
-  --muted: #5d6f71;
-  --line: #d3dddc;
-  --accent: #1f6b5c;
-  --accent-ink: #ffffff;
-  --accent-soft: #dcebe6;
-  --in: #2156a8;
-  --out: #b33a3a;
-  --warn-soft: #f7ecd9;
-  --warn-ink: #7a5412;
-  --f-display: "Gowun Batang", "Nanum Myeongjo", serif;
-  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --f-num: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+  --bg: #fff5f7;
+  --paper: #ffffff;
+  --ink: #4a2b35;
+  --muted: #94657a;
+  --line: #f6d6de;
+  --accent: #f7a8bb;       /* 돼지 분홍 */
+  --accent-deep: #ee8aa3;  /* 귀, 코 */
+  --accent-ink: #4a2b35;
+  --accent-soft: #ffe4eb;
+  --cheek: #ff7f9f;
+  --coin: #ffd66b;
+  --coin-edge: #e9ac2c;
+  --in: #3d73c2;
+  --out: #d44b69;
+  --warn-soft: #fff1d6;
+  --warn-ink: #85550f;
+  --f-display: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-num: "Nunito", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121a1b; --paper: #192324; --ink: #e3ebea; --muted: #97a9a8; --line: #2c3a3b;
-    --accent: #5fb8a2; --accent-ink: #0d1716; --accent-soft: #1f3632;
-    --in: #7fa9ec; --out: #ec8b8b; --warn-soft: #3a2f1c; --warn-ink: #e9c27d;
+    --bg: #2a1b22; --paper: #35242c; --ink: #fbe7ee; --muted: #cf9fb1; --line: #50343f;
+    --accent: #f4a3b7; --accent-deep: #e5859f; --accent-ink: #2a1b22; --accent-soft: #4a2d39;
+    --cheek: #ff8fab; --coin: #ffd66b; --coin-edge: #d99c22;
+    --in: #92b9f2; --out: #ff94ab; --warn-soft: #43321c; --warn-ink: #f2c77f;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #121a1b; --paper: #192324; --ink: #e3ebea; --muted: #97a9a8; --line: #2c3a3b;
-  --accent: #5fb8a2; --accent-ink: #0d1716; --accent-soft: #1f3632;
-  --in: #7fa9ec; --out: #ec8b8b; --warn-soft: #3a2f1c; --warn-ink: #e9c27d;
+  --bg: #2a1b22; --paper: #35242c; --ink: #fbe7ee; --muted: #cf9fb1; --line: #50343f;
+  --accent: #f4a3b7; --accent-deep: #e5859f; --accent-ink: #2a1b22; --accent-soft: #4a2d39;
+  --cheek: #ff8fab; --coin: #ffd66b; --coin-edge: #d99c22;
+  --in: #92b9f2; --out: #ff94ab; --warn-soft: #43321c; --warn-ink: #f2c77f;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+body {
+  margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-color: var(--bg);
+  background-image: radial-gradient(color-mix(in srgb, var(--accent) 22%, transparent) 1.5px, transparent 1.6px);
+  background-size: 22px 22px;
+  color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6;
+}
+[hidden] { display: none !important; }
 .wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 64px; display: flex; flex-direction: column; gap: 18px; }
-h1, h2 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
-.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+h1, h2 { font-family: var(--f-display); font-weight: 400; text-wrap: balance; margin: 0; }
+.num { font-family: var(--f-num); font-weight: 600; font-variant-numeric: tabular-nums; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--accent-deep); outline-offset: 2px; }
 
-/* cover */
-.cover { background: var(--accent); color: var(--accent-ink); border-radius: 14px; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 14px; }
-.cover-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.cover h1 { font-size: 1.25rem; }
-.cover .acct { font-family: var(--f-num); font-size: .78rem; letter-spacing: .08em; opacity: .8; }
-.bal-label { font-size: .78rem; letter-spacing: .08em; opacity: .85; }
-.bal { font-family: var(--f-display); font-size: clamp(2rem, 8vw, 2.8rem); line-height: 1.1; }
-.bal small { font-size: .45em; margin-left: 4px; }
-.cover-stats { display: flex; gap: 22px; flex-wrap: wrap; font-size: .85rem; border-top: 1px solid color-mix(in srgb, var(--accent-ink) 25%, transparent); padding-top: 12px; }
-.cover-stats b { font-family: var(--f-num); font-weight: 500; margin-left: 6px; }
+/* cover: 저금통 */
+.cover {
+  background: var(--accent-soft); color: var(--ink);
+  border: 2px solid var(--accent); border-radius: 28px;
+  padding: 20px 22px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: center;
+}
+.cover-main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cover h1 { font-size: 1.35rem; color: var(--accent-deep); }
+.cover .acct { font-size: .8rem; color: var(--muted); }
+.bal-label { font-size: .85rem; color: var(--muted); }
+.bal { font-family: var(--f-num); font-weight: 800; font-size: clamp(2rem, 8vw, 2.9rem); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.bal small { font-family: var(--f-display); font-weight: 400; font-size: .45em; margin-left: 4px; }
+.cover-stats { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; font-size: .82rem; padding-top: 6px; }
+.cover-stats > span { background: var(--paper); border-radius: 99px; padding: 4px 12px; }
+.cover-stats b { font-family: var(--f-num); font-weight: 800; margin-left: 6px; }
+.cover-stats .sync { background: none; color: var(--muted); padding-inline: 4px; }
 
-.notice { background: var(--warn-soft); color: var(--warn-ink); border-radius: 10px; padding: 10px 14px; font-size: .88rem; }
+/* 돼지 */
+.pig { width: 132px; height: auto; overflow: visible; }
+.pig .body { fill: var(--accent); }
+.pig .deep { fill: var(--accent-deep); }
+.pig .nostril { fill: color-mix(in srgb, var(--accent-deep) 55%, var(--ink)); }
+.pig .eye { fill: #4a2b35; }
+.pig .cheek { fill: var(--cheek); opacity: .45; }
+.pig .shine { fill: #ffffff; opacity: .55; }
+.pig .tail { fill: none; stroke: var(--accent-deep); stroke-width: 3.5; stroke-linecap: round; }
+.pig .coin circle { fill: var(--coin); stroke: var(--coin-edge); stroke-width: 2.5; }
+.pig .coin text { fill: var(--coin-edge); font: 800 12px var(--f-num); }
+@media (max-width: 460px) { .pig { width: 96px; } }
+@media (prefers-reduced-motion: no-preference) {
+  .pig.drop .coin { animation: coin-drop .9s cubic-bezier(.5, 0, .75, 0) both; }
+  .pig.drop .pig-body { animation: oink .5s .75s ease-in-out both; transform-origin: 70px 100px; }
+  @keyframes coin-drop { 0% { transform: translateY(-26px); opacity: 0; } 25% { opacity: 1; } 80% { transform: translateY(18px); opacity: 1; } 100% { transform: translateY(24px); opacity: 0; } }
+  @keyframes oink { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-4deg) scale(1.03); } 65% { transform: rotate(3deg); } }
+}
+
+.notice { background: var(--warn-soft); color: var(--warn-ink); border-radius: 16px; padding: 10px 16px; font-size: .88rem; }
 
 /* tabs */
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
-.tab { background: none; border: 0; padding: 10px 14px; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; white-space: nowrap; }
-.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 4px; background: var(--paper); border: 2px solid var(--line); border-radius: 99px; }
+.tab { flex: 1; background: none; border: 0; padding: 8px 14px; border-radius: 99px; color: var(--muted); font-family: var(--f-display); font-size: 1rem; white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
 
 .panel { display: flex; flex-direction: column; gap: 14px; }
 .row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-.btn { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 8px 14px; font-weight: 500; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn { border: 2px solid var(--line); background: var(--paper); border-radius: 99px; padding: 7px 16px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-family: var(--f-display); font-size: 1rem; }
+.btn.primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
 .btn.ghost { background: none; border-color: transparent; color: var(--muted); padding: 4px 8px; font-size: .82rem; }
-.btn.danger { color: var(--out); border-color: var(--out); background: none; padding: 4px 8px; font-size: .82rem; }
+.btn.danger { color: var(--out); border-color: var(--out); background: none; padding: 4px 10px; font-size: .82rem; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ledger */
-.ledger-wrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+.ledger-wrap { overflow-x: auto; background: var(--paper); border: 2px solid var(--line); border-radius: 20px; }
 table.ledger { width: 100%; border-collapse: collapse; min-width: 560px; font-size: .9rem; }
-.ledger th { text-align: left; font-weight: 500; font-size: .75rem; letter-spacing: .06em; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--accent-soft); }
+.ledger th { text-align: left; font-weight: 400; font-family: var(--f-display); font-size: .85rem; color: var(--muted); padding: 10px 12px; border-bottom: 2px solid var(--line); background: var(--accent-soft); }
 .ledger td { padding: 10px 12px; border-bottom: 1px dashed var(--line); vertical-align: top; }
 .ledger tr:last-child td { border-bottom: 0; }
 .ledger .r { text-align: right; }
 .ledger .in { color: var(--in); }
 .ledger .out { color: var(--out); }
 .ledger .memo { color: var(--muted); font-size: .8rem; }
-.chip { display: inline-block; font-size: .72rem; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--ink); margin-right: 6px; }
+.chip { display: inline-block; font-size: .72rem; padding: 1px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--ink); margin-right: 6px; }
 .empty { padding: 28px 16px; text-align: center; color: var(--muted); }
 
 /* form */
-.sheet { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.sheet h2 { font-size: 1.05rem; }
+.sheet { background: var(--paper); border: 2px solid var(--accent); border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.sheet h2 { font-size: 1.15rem; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.field label { font-size: .78rem; color: var(--muted); letter-spacing: .04em; }
-.field input, .field select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; width: 100%; }
-.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg button { flex: 1; border: 0; background: var(--bg); padding: 8px; }
+.field label { font-size: .8rem; color: var(--muted); }
+.field input, .field select { border: 2px solid var(--line); background: var(--bg); border-radius: 14px; padding: 8px 12px; width: 100%; }
+.seg { display: flex; gap: 6px; padding: 4px; border: 2px solid var(--line); border-radius: 99px; background: var(--bg); }
+.seg button { flex: 1; border: 0; background: none; padding: 7px; border-radius: 99px; }
 .seg button[aria-pressed="true"].t-in { background: var(--in); color: var(--paper); }
 .seg button[aria-pressed="true"].t-out { background: var(--out); color: var(--paper); }
 .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .err { color: var(--out); font-size: .85rem; }
 
 /* dues */
-.dues-wrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+.dues-wrap { overflow-x: auto; background: var(--paper); border: 2px solid var(--line); border-radius: 20px; }
 table.dues { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .88rem; }
-.dues th, .dues td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--line); }
-.dues th { font-weight: 500; font-size: .75rem; color: var(--muted); background: var(--accent-soft); }
-.dues td.name { text-align: left; padding-left: 12px; font-weight: 500; white-space: nowrap; }
-.cell { border: 1px solid var(--line); background: none; border-radius: 6px; padding: 4px 8px; font-size: .78rem; min-width: 52px; }
-.cell.paid { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.cell.part { background: var(--warn-soft); border-color: var(--warn-soft); color: var(--warn-ink); }
+.dues th, .dues td { padding: 8px 6px; text-align: center; border-bottom: 1px dashed var(--line); }
+.dues th { font-weight: 600; font-family: var(--f-num); font-size: .78rem; color: var(--muted); background: var(--accent-soft); border-bottom: 2px solid var(--line); }
+.dues td.name { text-align: left; padding-left: 14px; font-family: var(--f-display); white-space: nowrap; }
+.dues tr:last-child td { border-bottom: 0; }
+.cell { border: 2px solid var(--line); background: none; border-radius: 99px; padding: 3px 8px; font-size: .78rem; min-width: 54px; }
+.cell.paid { background: var(--coin); border-color: var(--coin-edge); color: #5a3a06; }
+.cell.part { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
 .cell.unpaid { color: var(--muted); border-style: dashed; }
-.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); align-items: center; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 4px; border: 2px solid var(--line); }
+.legend i.paid { background: var(--coin); border-color: var(--coin-edge); }
+.legend i.part { background: var(--accent-soft); border-color: var(--accent); }
+.legend i.unpaid { border-style: dashed; }
 
 /* stats */
-.card { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.card h2 { font-size: 1rem; }
+.card { background: var(--paper); border: 2px solid var(--line); border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { font-size: 1.1rem; }
 .bars { display: flex; flex-direction: column; gap: 10px; }
-.bar-row { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; font-size: .82rem; }
-.bar-pair { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.bar { height: 10px; border-radius: 3px; min-width: 2px; }
+.bar-row { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; font-size: .82rem; }
+.bar-pair { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bar { height: 12px; border-radius: 99px; min-width: 4px; }
 .bar.in { background: var(--in); }
 .bar.out { background: var(--out); }
 .bar.cat { background: var(--accent); }
 .bar-line { display: flex; align-items: center; gap: 8px; }
-.bar-line span { font-family: var(--f-num); font-size: .75rem; color: var(--muted); white-space: nowrap; }
+.bar-line span { font-family: var(--f-num); font-weight: 600; font-size: .75rem; color: var(--muted); white-space: nowrap; }
 .cat-row { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center; font-size: .85rem; }
 
 /* settings */
 .members { display: flex; flex-direction: column; gap: 8px; }
 .member-row { display: flex; gap: 8px; align-items: center; }
-.member-row input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; }
-.hint { font-size: .8rem; color: var(--muted); margin: 0; }
-
-.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: .88rem; max-width: calc(100% - 32px); }
-@media (prefers-reduced-motion: no-preference) { .toast { transition: opacity .2s; } }
-</style>
-<style>
-html { color-scheme: light; }
-body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
-[hidden] { display: none !important; }
-.sync { font-size: .75rem; opacity: .8; }
+.member-row input { flex: 1; min-width: 0; border: 2px solid var(--line); background: var(--bg); border-radius: 14px; padding: 8px 12px; }
+.hint { font-size: .82rem; color: var(--muted); margin: 0; }
 .connect { max-width: 460px; }
-.connect ol { margin: 0; padding-left: 20px; font-size: .88rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+/* 기간 선택 */
+.filter { margin-top: 14px; background: var(--paper); border: 2px solid var(--line); border-radius: 20px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.quick button { border: 2px solid var(--line); background: none; border-radius: 99px; padding: 3px 12px; font-size: .85rem; color: var(--muted); }
+.quick button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.range { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.range .field { flex: 1 1 130px; }
+.range .field.grow { flex: 2 1 180px; }
+.range .tilde { padding-bottom: 10px; color: var(--muted); }
+/* 거래 기록 팝업 */
+dialog.modal { border: 0; padding: 0; background: none; color: var(--ink); width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; }
+dialog.modal::backdrop { background: color-mix(in srgb, #4a2b35 45%, transparent); }
+dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, transparent); }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.x { border: 0; background: var(--accent-soft); color: var(--ink); width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; line-height: 1; flex: none; }
+@media (prefers-reduced-motion: no-preference) {
+  dialog.modal[open] { animation: pop .18s ease-out; }
+  @keyframes pop { from { transform: translateY(12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+}
+.carry td { background: var(--accent-soft); color: var(--muted); font-size: .85rem; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 99px; font-size: .88rem; max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: no-preference) { .toast { transition: opacity .2s; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <section class="cover" aria-label="잔액">
-    <div class="cover-top">
-      <h1>우리집 공금통장</h1>
-      <span class="acct">가족 7인 · 공동관리</span>
+    <div class="cover-main">
+      <div>
+        <h1>우리집 공금 저금통</h1>
+        <span class="acct">가족 7명이 함께 모아요</span>
+      </div>
+      <div>
+        <div class="bal-label">저금통에 모인 돈</div>
+        <div class="bal" id="balance">—<small>원</small></div>
+      </div>
     </div>
-    <div>
-      <div class="bal-label">현재 잔액</div>
-      <div class="bal" id="balance">—<small>원</small></div>
-    </div>
+    <svg class="pig" id="pig" viewBox="0 -8 140 124" role="img" aria-label="돼지 저금통">
+      <g class="coin"><circle cx="73" cy="10" r="11"/><text x="73" y="14.5" text-anchor="middle">₩</text></g>
+      <g class="pig-body">
+        <path class="tail" d="M19 60c-9-2-11 8-4 8s3-9-3-6"/>
+        <rect class="deep" x="34" y="88" width="15" height="20" rx="6"/>
+        <rect class="deep" x="84" y="88" width="15" height="20" rx="6"/>
+        <path class="deep" d="M84 34 94 12 106 34Z"/>
+        <ellipse class="body" cx="70" cy="64" rx="52" ry="38"/>
+        <ellipse class="shine" cx="46" cy="46" rx="12" ry="6" transform="rotate(-25 46 46)"/>
+        <rect class="deep" x="60" y="29" width="26" height="6" rx="3"/>
+        <ellipse class="deep" cx="120" cy="66" rx="13" ry="12"/>
+        <ellipse class="nostril" cx="116" cy="66" rx="2.2" ry="3.4"/>
+        <ellipse class="nostril" cx="124" cy="66" rx="2.2" ry="3.4"/>
+        <circle class="eye" cx="99" cy="52" r="4.2"/>
+        <circle class="shine" cx="100.5" cy="50.5" r="1.4"/>
+        <ellipse class="cheek" cx="97" cy="73" rx="8" ry="5"/>
+      </g>
+    </svg>
     <div class="cover-stats">
       <span>이번 달 입금<b id="mIn">0원</b></span>
       <span>이번 달 출금<b id="mOut">0원</b></span>
@@ -170,7 +251,7 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
 
   <!-- 처음 연결 -->
   <form class="card connect" id="connectForm" hidden>
-    <h2>공금통장 연결하기</h2>
+    <h2>저금통 열기</h2>
     <p class="hint">가족 비밀번호를 한 번만 입력하면 이 기기에서 기억합니다.</p>
     <div class="field"><label for="cPass">가족 비밀번호</label><input type="password" id="cPass" autocomplete="current-password" required></div>
     <div class="err" id="connectErr" hidden></div>
@@ -185,11 +266,31 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
       <button class="tab" role="tab" id="tab-settings" data-tab="settings" aria-selected="false">설정</button>
     </nav>
 
-    <form class="sheet" id="txForm" hidden style="margin-top:14px">
-      <h2 id="formTitle">거래 기록하기</h2>
+    <form class="filter" id="periodBar" aria-label="기간 선택">
+      <div class="quick" role="group" aria-label="빠른 기간 선택">
+        <button type="button" data-range="1">이번 달</button>
+        <button type="button" data-range="3">최근 3개월</button>
+        <button type="button" data-range="6" aria-pressed="true">최근 6개월</button>
+        <button type="button" data-range="year">올해</button>
+        <button type="button" data-range="all">전체</button>
+      </div>
+      <div class="range">
+        <div class="field"><label for="pFrom">시작일</label><input type="date" id="pFrom"></div>
+        <span class="tilde" aria-hidden="true">~</span>
+        <div class="field"><label for="pTo">종료일</label><input type="date" id="pTo"></div>
+        <div class="field grow" id="kwWrap"><label for="pKw">검색어</label><input type="search" id="pKw" placeholder="이름, 적요, 분류로 찾기" autocomplete="off"></div>
+      </div>
+    </form>
+
+    <dialog class="modal" id="txDialog" aria-labelledby="formTitle">
+    <form class="sheet" id="txForm">
+      <div class="sheet-head">
+        <h2 id="formTitle">거래 기록하기</h2>
+        <button type="button" class="x" id="closeForm" aria-label="닫기">×</button>
+      </div>
       <div class="seg" role="group" aria-label="구분">
-        <button type="button" class="t-in" id="typeIn" aria-pressed="true">입금 (맡기신 금액)</button>
-        <button type="button" class="t-out" id="typeOut" aria-pressed="false">출금 (찾으신 금액)</button>
+        <button type="button" class="t-in" id="typeIn" aria-pressed="true">입금</button>
+        <button type="button" class="t-out" id="typeOut" aria-pressed="false">출금</button>
       </div>
       <div class="grid">
         <div class="field"><label for="fDate">날짜</label><input type="date" id="fDate" required></div>
@@ -205,18 +306,19 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
         <button type="submit" class="btn primary" id="saveTx">기록하기</button>
       </div>
     </form>
+    </dialog>
 
     <section class="panel" id="panel-ledger" role="tabpanel" aria-labelledby="tab-ledger" style="margin-top:14px">
       <div class="row-between">
         <span class="hint" id="ledgerCount">거래 0건</span>
         <div class="actions">
-          <button class="btn" id="exportCsv" hidden>엑셀용 CSV 받기</button>
+          <button class="btn" id="exportCsv" hidden>이 기간 CSV 받기</button>
           <button class="btn primary" id="openForm">+ 거래 기록</button>
         </div>
       </div>
       <div class="ledger-wrap">
         <table class="ledger">
-          <thead><tr><th>날짜</th><th>적요</th><th class="r">찾으신 금액</th><th class="r">맡기신 금액</th><th class="r">잔액</th><th></th></tr></thead>
+          <thead><tr><th>날짜</th><th>적요</th><th class="r">출금</th><th class="r">입금</th><th class="r">잔액</th><th></th></tr></thead>
           <tbody id="ledgerBody"></tbody>
         </table>
       </div>
@@ -225,7 +327,7 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
     <section class="panel" id="panel-dues" role="tabpanel" aria-labelledby="tab-dues" hidden style="margin-top:14px">
       <div class="row-between">
         <span class="hint" id="duesHint">월 회비 0원</span>
-        <div class="legend"><span>■ 납부 완료</span><span>◧ 일부 납부</span><span>□ 미납 (눌러서 기록)</span></div>
+        <div class="legend"><span><i class="paid"></i>납부 완료</span><span><i class="part"></i>일부 납부</span><span><i class="unpaid"></i>미납 (눌러서 기록)</span></div>
       </div>
       <div class="dues-wrap"><table class="dues"><thead id="duesHead"></thead><tbody id="duesBody"></tbody></table></div>
     </section>
@@ -342,7 +444,7 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
       await api("load");
       store.set(LS_PASS, passcode);
       $("connectForm").hidden = true; $("app").hidden = false; $("cPass").value = "";
-      toast("공금통장에 연결했습니다.");
+      toast("저금통을 열었어요.");
     } catch (ex) {
       passcode = "";
       $("connectErr").textContent = explain(ex); $("connectErr").hidden = false;
@@ -359,6 +461,10 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
   });
 
   // ---------- UI helpers ----------
+  function dropCoin() {
+    const pig = $("pig"); pig.classList.remove("drop"); void pig.getBoundingClientRect(); pig.classList.add("drop");
+    pig.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
   let toastTimer;
   function toast(msg) {
     const t = $("toast"); t.textContent = msg; t.hidden = false;
@@ -370,6 +476,8 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
   document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
     ["ledger", "dues", "stats", "settings"].forEach((k) => { $("panel-" + k).hidden = k !== b.dataset.tab; });
+    $("periodBar").hidden = !["ledger", "dues"].includes(b.dataset.tab);
+    $("kwWrap").hidden = b.dataset.tab !== "ledger";
     if (b.dataset.tab === "settings") renderSettings();
   }));
 
@@ -407,12 +515,14 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
     $("fMemo").value = preset.memo || "";
     $("formErr").hidden = true;
     syncMonthField();
-    $("txForm").hidden = false;
-    $("txForm").scrollIntoView({ block: "nearest" });
+    const dlg = $("txDialog"); if (!dlg.open) dlg.showModal();
     $("fAmount").focus();
   }
   $("openForm").addEventListener("click", () => openForm());
-  $("cancelForm").addEventListener("click", () => { $("txForm").hidden = true; });
+  const closeForm = () => $("txDialog").close();
+  $("cancelForm").addEventListener("click", closeForm);
+  $("closeForm").addEventListener("click", closeForm);
+  $("txDialog").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeForm(); });
 
   $("txForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -430,9 +540,9 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
       memo: $("fMemo").value.trim(),
     };
     $("saveTx").disabled = true; $("saveTx").textContent = "기록 중…";
-    const ok = await write("addTx", { tx }, formType === "in" ? `${won(amount)} 입금을 기록했습니다.` : `${won(amount)} 출금을 기록했습니다.`);
+    const ok = await write("addTx", { tx }, formType === "in" ? `꿀꿀! ${won(amount)}이 저금통에 들어왔어요.` : `${won(amount)} 출금을 기록했어요.`);
     $("saveTx").disabled = false; $("saveTx").textContent = "기록하기";
-    if (ok) $("txForm").hidden = true;
+    if (ok) { closeForm(); if (formType === "in") dropCoin(); }
   });
 
   // ---------- derived ----------
@@ -444,6 +554,52 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
     return txs.filter((t) => t.type === "in" && t.category === "회비" && t.memberId === memberId && t.month === month)
       .reduce((s, t) => s + t.amount, 0);
   }
+
+  // ---------- 기간 ----------
+  const period = { from: "", to: "", kw: "" };
+  const firstOfMonthAgo = (n) => { const d = new Date(); const x = new Date(d.getFullYear(), d.getMonth() - n, 1); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-01`; };
+  function setRange(r) {
+    if (r === "all") { period.from = ""; period.to = ""; }
+    else if (r === "year") { period.from = today().slice(0, 4) + "-01-01"; period.to = today(); }
+    else { period.from = firstOfMonthAgo(Number(r) - 1); period.to = today(); }
+    $("pFrom").value = period.from; $("pTo").value = period.to;
+    document.querySelectorAll(".quick button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.range === String(r))));
+  }
+  function periodLabel() {
+    const f = (d) => d.slice(2).replace(/-/g, ".");
+    if (!period.from && !period.to) return "전체 기간";
+    return `${period.from ? f(period.from) : "처음"} ~ ${period.to ? f(period.to) : "오늘"}`;
+  }
+  function filteredTxs(asc) {
+    const kw = period.kw.trim().toLowerCase();
+    return asc.filter((t) => {
+      if (period.from && t.date < period.from) return false;
+      if (period.to && t.date > period.to) return false;
+      if (!kw) return true;
+      return [t.category, t.memo, memberName(t.memberId), t.type === "in" ? "입금" : "출금"].join(" ").toLowerCase().includes(kw);
+    });
+  }
+  function periodMonths() {
+    const earliest = txs.reduce((m, t) => (t.date < m ? t.date : m), today());
+    const start = (period.from || earliest).slice(0, 7);
+    const end = (period.to || today()).slice(0, 7);
+    const out = []; let [y, m] = start.split("-").map(Number);
+    while (`${y}-${pad(m)}` <= end && out.length < 600) { out.push(`${y}-${pad(m)}`); m++; if (m > 12) { m = 1; y++; } }
+    return out.length ? out : [thisMonth()];
+  }
+  document.querySelectorAll(".quick button").forEach((b) => b.addEventListener("click", () => { setRange(b.dataset.range); render(); }));
+  function onDateChange() {
+    let f = $("pFrom").value, t = $("pTo").value;
+    if (f && t && f > t) { [f, t] = [t, f]; $("pFrom").value = f; $("pTo").value = t; }
+    period.from = f; period.to = t;
+    document.querySelectorAll(".quick button").forEach((b) => b.setAttribute("aria-pressed", "false"));
+    render();
+  }
+  $("pFrom").addEventListener("change", onDateChange);
+  $("pTo").addEventListener("change", onDateChange);
+  $("pKw").addEventListener("input", () => { period.kw = $("pKw").value; render(); });
+  $("periodBar").addEventListener("submit", (e) => e.preventDefault());
+  setRange("6");
 
   // ---------- render ----------
   function render() {
@@ -468,15 +624,18 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
 
   function renderLedger(asc, running) {
     const body = $("ledgerBody"); body.innerHTML = "";
-    $("ledgerCount").textContent = `거래 ${txs.length}건`;
-    $("exportCsv").hidden = !txs.length;
-    if (!txs.length) {
+    const rows = filteredTxs(asc);
+    const sumIn = rows.filter((t) => t.type === "in").reduce((s, t) => s + t.amount, 0);
+    const sumOut = rows.filter((t) => t.type === "out").reduce((s, t) => s + t.amount, 0);
+    $("ledgerCount").textContent = `${periodLabel()} · ${rows.length}건 · 입금 ${won(sumIn)} · 출금 ${won(sumOut)}`;
+    $("exportCsv").hidden = !rows.length;
+    const emptyRow = (msg) => {
       const tr = document.createElement("tr"); const td = document.createElement("td");
-      td.colSpan = 6; td.className = "empty";
-      td.textContent = loaded ? "아직 기록이 없습니다. ‘+ 거래 기록’으로 첫 입금을 적어 보세요." : "장부를 불러오는 중입니다…";
-      tr.appendChild(td); body.appendChild(tr); return;
-    }
-    [...asc].reverse().forEach((t) => {
+      td.colSpan = 6; td.className = "empty"; td.textContent = msg; tr.appendChild(td); body.appendChild(tr);
+    };
+    if (!txs.length) { emptyRow(loaded ? "저금통이 아직 비어 있어요. ‘+ 거래 기록’으로 첫 동전을 넣어 보세요." : "장부를 불러오는 중입니다…"); return; }
+    if (!rows.length) emptyRow(period.kw ? "이 기간에 검색어와 맞는 기록이 없어요." : "이 기간에는 기록이 없어요. 기간을 넓혀 보세요.");
+    [...rows].reverse().forEach((t) => {
       const tr = document.createElement("tr");
       const dTd = document.createElement("td"); dTd.className = "num"; dTd.textContent = t.date.slice(2).replace(/-/g, ".");
       const sTd = document.createElement("td");
@@ -500,18 +659,29 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
       xTd.appendChild(del);
       tr.append(dTd, sTd, oTd, iTd, bTd, xTd); body.appendChild(tr);
     });
+    if (period.from && !period.kw && asc.some((t) => t.date < period.from)) {
+      const carry = asc.filter((t) => t.date < period.from).reduce((s, t) => s + (t.type === "in" ? t.amount : -t.amount), 0);
+      const tr = document.createElement("tr"); tr.className = "carry";
+      const a = document.createElement("td"); a.className = "num"; a.textContent = period.from.slice(2).replace(/-/g, ".");
+      const b = document.createElement("td"); b.colSpan = 3; b.textContent = "이전 기간에서 넘어온 잔액";
+      const c = document.createElement("td"); c.className = "r num"; c.textContent = carry.toLocaleString("ko-KR");
+      tr.append(a, b, c, document.createElement("td")); body.appendChild(tr);
+    }
   }
 
   function renderDues() {
-    const months = lastMonths(6); const due = settings.monthlyDue || 0;
-    $("duesHint").textContent = due ? `1인당 월 회비 ${won(due)}` : "설정 탭에서 월 회비를 정해 주세요.";
+    const due = settings.monthlyDue || 0;
+    let months = periodMonths(); let capped = false;
+    if (months.length > 24) { months = months.slice(-24); capped = true; }
+    $("duesHint").textContent = (due ? `1인당 월 회비 ${won(due)}` : "설정 탭에서 월 회비를 정해 주세요.")
+      + ` · ${months[0].replace("-", ".")} ~ ${months[months.length - 1].replace("-", ".")}` + (capped ? " (최근 24개월까지 표시)" : "");
     const head = $("duesHead"); head.innerHTML = "";
     const hr = document.createElement("tr"); const h0 = document.createElement("th"); h0.textContent = "이름"; hr.appendChild(h0);
     months.forEach((mo) => { const th = document.createElement("th"); th.textContent = `${mo.slice(2, 4)}.${mo.slice(5)}`; hr.appendChild(th); });
     head.appendChild(hr);
     const body = $("duesBody"); body.innerHTML = "";
     if (!settings.members.length) {
-      const tr = document.createElement("tr"); const td = document.createElement("td"); td.colSpan = 7; td.className = "empty";
+      const tr = document.createElement("tr"); const td = document.createElement("td"); td.colSpan = months.length + 1; td.className = "empty";
       td.textContent = "설정 탭에서 가족 7명의 이름을 먼저 등록해 주세요."; tr.appendChild(td); body.appendChild(tr); return;
     }
     settings.members.forEach((mb) => {
@@ -603,13 +773,15 @@ body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: en
     const q = (s) => `"${String(s ?? "").replace(/"/g, '""')}"`;
     let bal = 0;
     const lines = [["날짜", "구분", "분류", "구성원", "회비 월", "적요", "출금", "입금", "잔액"].map(q).join(",")];
-    sortedAsc().forEach((t) => {
+    const asc = sortedAsc(); const keep = new Set(filteredTxs(asc).map((t) => t.id));
+    asc.forEach((t) => {
       bal += t.type === "in" ? t.amount : -t.amount;
+      if (!keep.has(t.id)) return;
       lines.push([t.date, t.type === "in" ? "입금" : "출금", t.category, memberName(t.memberId), t.month || "", t.memo,
         t.type === "out" ? t.amount : "", t.type === "in" ? t.amount : "", bal].map(q).join(","));
     });
     const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `공금통장_${today()}.csv`;
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `공금저금통_${period.from || "처음"}_${period.to || today()}.csv`;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 
