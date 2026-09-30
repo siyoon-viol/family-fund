@@ -21,6 +21,7 @@ export default {
       switch (req.action) {
         case "load": break;
         case "addTx": await addTx(env.DB, req.tx); break;
+        case "updateTx": await updateTx(env.DB, req.id, req.tx); break;
         case "deleteTx": await env.DB.prepare("DELETE FROM tx WHERE id = ?").bind(String(req.id || "")).run(); break;
         case "saveSettings": await saveSettings(env.DB, req.settings); break;
         default: return json({ ok: false, error: "unknown_action" }, 400);
@@ -70,18 +71,34 @@ async function readAll(db) {
   };
 }
 
-async function addTx(db, t) {
+function cleanTx(t) {
   if (!t || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) throw new InputError("날짜 형식이 올바르지 않습니다.");
   const amount = Math.round(Number(t.amount));
   if (!(amount > 0) || amount > 1e12) throw new InputError("금액이 올바르지 않습니다.");
-  const type = t.type === "out" ? "out" : "in";
-  const month = typeof t.month === "string" && /^\d{4}-\d{2}$/.test(t.month) ? t.month : null;
+  return {
+    date: t.date,
+    type: t.type === "out" ? "out" : "in",
+    category: String(t.category || "기타").slice(0, 20),
+    amount,
+    memberId: t.memberId ? String(t.memberId).slice(0, 20) : null,
+    month: typeof t.month === "string" && /^\d{4}-\d{2}$/.test(t.month) ? t.month : null,
+    memo: String(t.memo || "").slice(0, 80),
+  };
+}
+
+async function addTx(db, t) {
+  const c = cleanTx(t);
   await db.prepare(
     "INSERT INTO tx (id, date, type, category, amount, member_id, month, memo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-  ).bind(
-    crypto.randomUUID(), t.date, type, String(t.category || "기타").slice(0, 20), amount,
-    t.memberId ? String(t.memberId).slice(0, 20) : null, month, String(t.memo || "").slice(0, 80), Date.now()
-  ).run();
+  ).bind(crypto.randomUUID(), c.date, c.type, c.category, c.amount, c.memberId, c.month, c.memo, Date.now()).run();
+}
+
+async function updateTx(db, id, t) {
+  const c = cleanTx(t);
+  const r = await db.prepare(
+    "UPDATE tx SET date = ?, type = ?, category = ?, amount = ?, member_id = ?, month = ?, memo = ? WHERE id = ?"
+  ).bind(c.date, c.type, c.category, c.amount, c.memberId, c.month, c.memo, String(id || "")).run();
+  if (!r.meta.changes) throw new InputError("수정할 기록을 찾지 못했습니다. 다른 가족이 먼저 삭제했을 수 있어요.");
 }
 
 async function saveSettings(db, s) {

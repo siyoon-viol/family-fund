@@ -202,6 +202,7 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
   dialog.modal[open] { animation: pop .18s ease-out; }
   @keyframes pop { from { transform: translateY(12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
 }
+.row-actions { white-space: nowrap; }
 .carry td { background: var(--accent-soft); color: var(--muted); font-size: .85rem; }
 
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 99px; font-size: .88rem; max-width: calc(100% - 32px); }
@@ -504,12 +505,21 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
   $("fCat").addEventListener("change", syncMonthField);
   $("fAmount").addEventListener("input", (e) => { const n = parseAmt(e.target.value); e.target.value = n ? n.toLocaleString("ko-KR") : ""; });
 
-  function openForm(preset = {}) {
+  let editingId = null;
+  function openForm(preset = {}, id = null) {
+    editingId = id;
+    $("formTitle").textContent = id ? "거래 수정하기" : "거래 기록하기";
+    $("saveTx").textContent = id ? "수정하기" : "기록하기";
     fillMemberSelect();
     setType(preset.type || "in");
-    $("fDate").value = today();
+    $("fDate").value = preset.date || today();
     $("fAmount").value = preset.amount ? preset.amount.toLocaleString("ko-KR") : "";
-    if (preset.category) $("fCat").value = preset.category;
+    if (preset.category) {
+      if (![...$("fCat").options].some((o) => o.value === preset.category)) {
+        const o = document.createElement("option"); o.value = o.textContent = preset.category; $("fCat").appendChild(o);
+      }
+      $("fCat").value = preset.category;
+    }
     $("fMember").value = preset.memberId || "";
     $("fMonth").value = preset.month || thisMonth();
     $("fMemo").value = preset.memo || "";
@@ -539,10 +549,13 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
       month: isDues ? ($("fMonth").value || thisMonth()) : null,
       memo: $("fMemo").value.trim(),
     };
-    $("saveTx").disabled = true; $("saveTx").textContent = "기록 중…";
-    const ok = await write("addTx", { tx }, formType === "in" ? `꿀꿀! ${won(amount)}이 저금통에 들어왔어요.` : `${won(amount)} 출금을 기록했어요.`);
-    $("saveTx").disabled = false; $("saveTx").textContent = "기록하기";
-    if (ok) { closeForm(); if (formType === "in") dropCoin(); }
+    const editing = editingId;
+    $("saveTx").disabled = true; $("saveTx").textContent = editing ? "수정 중…" : "기록 중…";
+    const ok = editing
+      ? await write("updateTx", { id: editing, tx }, "기록을 수정했어요.")
+      : await write("addTx", { tx }, formType === "in" ? `꿀꿀! ${won(amount)}이 저금통에 들어왔어요.` : `${won(amount)} 출금을 기록했어요.`);
+    $("saveTx").disabled = false; $("saveTx").textContent = editing ? "수정하기" : "기록하기";
+    if (ok) { closeForm(); if (!editing && formType === "in") dropCoin(); }
   });
 
   // ---------- derived ----------
@@ -656,7 +669,11 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
         const ok = await write("deleteTx", { id: t.id }, "기록을 삭제했습니다.");
         if (!ok) del.disabled = false;
       });
-      xTd.appendChild(del);
+      const edit = document.createElement("button"); edit.className = "btn ghost"; edit.textContent = "수정"; edit.type = "button";
+      edit.setAttribute("aria-label", `${t.date} ${t.category} ${won(t.amount)} 기록 수정`);
+      edit.addEventListener("click", () => openForm(t, t.id));
+      xTd.className = "r row-actions";
+      xTd.append(edit, del);
       tr.append(dTd, sTd, oTd, iTd, bTd, xTd); body.appendChild(tr);
     });
     if (period.from && !period.kw && asc.some((t) => t.date < period.from)) {
