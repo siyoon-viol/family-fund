@@ -203,6 +203,9 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
   @keyframes pop { from { transform: translateY(12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
 }
 .row-actions { white-space: nowrap; }
+.acct-show { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--accent-soft); border-radius: 16px; padding: 12px 14px; }
+.acct-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acct-text b { font-size: 1.2rem; font-weight: 800; letter-spacing: .02em; overflow-wrap: anywhere; }
 
 /* 여러 줄 입력 */
 .lines { display: flex; flex-direction: column; gap: 8px; }
@@ -366,6 +369,19 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
         <h2>월 회비</h2>
         <div class="field" style="max-width:240px"><label for="sDue">1인당 매월 (원)</label><input type="text" inputmode="numeric" id="sDue" placeholder="100,000"></div>
       </div>
+      <div class="card">
+        <h2>입금 계좌</h2>
+        <p class="hint">가족이 회비를 보낼 계좌입니다. 복사 버튼을 누르면 은행 앱에 바로 붙여 넣을 수 있어요.</p>
+        <div class="acct-show" id="acctShow" hidden>
+          <div class="acct-text"><span id="acctBankText"></span><b class="num" id="acctNumText"></b><span class="hint" id="acctHolderText"></span></div>
+          <button class="btn primary" id="copyAccount" type="button">계좌 복사</button>
+        </div>
+        <div class="grid">
+          <div class="field"><label for="sBank">은행·증권사</label><input type="text" id="sBank" maxlength="30" placeholder="예: 미래에셋증권" autocomplete="off"></div>
+          <div class="field"><label for="sAcctNo">계좌번호</label><input type="text" inputmode="numeric" id="sAcctNo" maxlength="30" placeholder="000-0000-0000-0" autocomplete="off"></div>
+          <div class="field"><label for="sHolder">예금주 (선택)</label><input type="text" id="sHolder" maxlength="30" autocomplete="off"></div>
+        </div>
+      </div>
       <div class="actions"><button class="btn primary" id="saveSettings">설정 저장</button></div>
       <div class="card">
         <h2>이 기기 연결</h2>
@@ -421,7 +437,8 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
   };
 
   let passcode = store.get(LS_PASS);
-  let settings = { members: [], monthlyDue: 0 };
+  const noAccount = { bank: "", number: "", holder: "" };
+  let settings = { members: [], monthlyDue: 0, account: noAccount };
   let txs = [];
   let loaded = false, busy = false;
   let formType = "in";
@@ -483,7 +500,7 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
     } finally { $("connectBtn").disabled = false; $("connectBtn").textContent = "연결"; }
   });
   $("disconnect").addEventListener("click", () => {
-    store.del(LS_PASS); passcode = ""; loaded = false; txs = []; settings = { members: [], monthlyDue: 0 };
+    store.del(LS_PASS); passcode = ""; loaded = false; txs = []; settings = { members: [], monthlyDue: 0, account: noAccount };
     render(); showConnect();
   });
   $("copyInvite").addEventListener("click", async () => {
@@ -854,13 +871,25 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
       row.append(inp, rm); list.appendChild(row);
     });
     if (settings.monthlyDue) $("sDue").value = settings.monthlyDue.toLocaleString("ko-KR");
+    const acc = settings.account || noAccount;
+    $("sBank").value = acc.bank; $("sAcctNo").value = acc.number; $("sHolder").value = acc.holder;
+    $("acctShow").hidden = !acc.number;
+    $("acctBankText").textContent = acc.bank;
+    $("acctNumText").textContent = acc.number;
+    $("acctHolderText").textContent = acc.holder ? "예금주 " + acc.holder : "";
   }
+  $("copyAccount").addEventListener("click", async () => {
+    const acc = settings.account || noAccount;
+    const text = [acc.bank, acc.number].filter(Boolean).join(" ");
+    try { await navigator.clipboard.writeText(text); toast("계좌를 복사했어요. " + text); }
+    catch { window.prompt("아래 계좌를 복사하세요", text); }
+  });
   $("addMember").addEventListener("click", () => { draftMembers.push({ id: uid(), name: "" }); renderSettings(); });
   $("sDue").addEventListener("input", (e) => { const n = parseAmt(e.target.value); e.target.value = n ? n.toLocaleString("ko-KR") : ""; });
   $("saveSettings").addEventListener("click", async () => {
     const members = draftMembers.filter((m) => m.name.trim()).map((m) => ({ id: m.id, name: m.name.trim() }));
     $("saveSettings").disabled = true;
-    const ok = await write("saveSettings", { settings: { members, monthlyDue: parseAmt($("sDue").value) } }, "설정을 저장했습니다.");
+    const ok = await write("saveSettings", { settings: { members, monthlyDue: parseAmt($("sDue").value), account: { bank: $("sBank").value.trim(), number: $("sAcctNo").value.trim(), holder: $("sHolder").value.trim() } } }, "설정을 저장했습니다.");
     $("saveSettings").disabled = false;
     if (ok) { draftMembers = null; renderSettings(); }
   });

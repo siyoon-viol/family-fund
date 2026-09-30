@@ -55,15 +55,17 @@ async function sameSecret(a, b) {
 }
 
 async function readAll(db) {
-  const [tx, members, due] = await db.batch([
+  const [tx, members, kv] = await db.batch([
     db.prepare("SELECT id, date, type, category, amount, member_id, month, memo, created_at FROM tx ORDER BY date, created_at"),
     db.prepare("SELECT id, name FROM members ORDER BY sort"),
-    db.prepare("SELECT value FROM settings WHERE key = 'monthlyDue'"),
+    db.prepare("SELECT key, value FROM settings"),
   ]);
+  const conf = Object.fromEntries(kv.results.map((r) => [r.key, r.value]));
   return {
     settings: {
       members: members.results,
-      monthlyDue: Number(due.results[0]?.value) || 0,
+      monthlyDue: Number(conf.monthlyDue) || 0,
+      account: { bank: conf.accountBank || "", number: conf.accountNumber || "", holder: conf.accountHolder || "" },
     },
     txs: tx.results.map((r) => ({
       id: r.id, date: r.date, type: r.type, category: r.category, amount: r.amount,
@@ -128,7 +130,15 @@ async function saveSettings(db, s) {
     .filter((m) => m && m.id && String(m.name || "").trim())
     .slice(0, MAX_MEMBERS);
   const due = Math.max(0, Math.round(Number(s && s.monthlyDue) || 0));
+  const upsert = (key, value) =>
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(key, value);
+  const acc = s && s.account && typeof s.account === "object" ? s.account : null;
   await db.batch([
+    ...(acc ? [
+      upsert("accountBank", String(acc.bank || "").trim().slice(0, 30)),
+      upsert("accountNumber", String(acc.number || "").replace(/[^\d-]/g, "").slice(0, 30)),
+      upsert("accountHolder", String(acc.holder || "").trim().slice(0, 30)),
+    ] : []),
     db.prepare("DELETE FROM members"),
     ...members.map((m, i) =>
       db.prepare("INSERT INTO members (id, name, sort) VALUES (?, ?, ?)")
