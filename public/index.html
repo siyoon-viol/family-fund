@@ -203,6 +203,21 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
   @keyframes pop { from { transform: translateY(12px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
 }
 .row-actions { white-space: nowrap; }
+
+/* 여러 줄 입력 */
+.lines { display: flex; flex-direction: column; gap: 8px; }
+.line { display: grid; grid-template-columns: minmax(158px, 1.2fr) 1fr 1.4fr 34px; gap: 8px; align-items: end; }
+.line.no-month { grid-template-columns: 1fr 1.9fr 34px; }
+.line .x { align-self: end; margin-bottom: 4px; }
+.line .x:disabled { visibility: hidden; }
+.lines-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lines-total { font-family: var(--f-num); font-weight: 800; }
+@media (max-width: 520px) {
+  .line, .line.no-month { grid-template-columns: 1fr 1fr 34px; }
+  .line .memo-field { grid-column: 1 / 3; }
+  .line.no-month .memo-field { grid-column: 1 / 3; grid-row: 2; }
+  .line .x { grid-column: 3; grid-row: 1; }
+}
 .carry td { background: var(--accent-soft); color: var(--muted); font-size: .85rem; }
 
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 99px; font-size: .88rem; max-width: calc(100% - 32px); }
@@ -295,12 +310,14 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
       </div>
       <div class="grid">
         <div class="field"><label for="fDate">날짜</label><input type="date" id="fDate" required></div>
-        <div class="field"><label for="fAmount">금액 (원)</label><input type="text" inputmode="numeric" id="fAmount" placeholder="50,000" required></div>
         <div class="field"><label for="fCat">분류</label><select id="fCat"></select></div>
         <div class="field"><label for="fMember" id="fMemberLabel">입금한 사람</label><select id="fMember"></select></div>
-        <div class="field" id="fMonthWrap"><label for="fMonth">회비 해당 월</label><input type="month" id="fMonth"></div>
       </div>
-      <div class="field"><label for="fMemo">적요 (메모)</label><input type="text" id="fMemo" maxlength="80" placeholder="예: 할머니 생신 케이크"></div>
+      <div class="lines" id="lines" role="group" aria-label="기록할 줄"></div>
+      <div class="lines-foot">
+        <button type="button" class="btn" id="addLine">+ 줄 추가</button>
+        <span class="lines-total" id="linesTotal"></span>
+      </div>
       <div class="err" id="formErr" hidden></div>
       <div class="actions">
         <button type="button" class="btn" id="cancelForm">취소</button>
@@ -383,6 +400,20 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
     return out;
   };
   const uid = () => Math.random().toString(36).slice(2, 10);
+  // 회비 월: "YYYY-MM" 한 달, 또는 "YYYY-MM~YYYY-MM" 여러 달
+  function monthList(a, b) {
+    const out = []; let [y, m] = a.split("-").map(Number);
+    while (`${y}-${pad(m)}` <= b && out.length < 120) { out.push(`${y}-${pad(m)}`); m++; if (m > 12) { m = 1; y++; } }
+    return out;
+  }
+  const splitRange = (v) => { const [a, b] = String(v || "").split("~"); return [a, b || a]; };
+  const monthsOf = (v) => (v ? monthList(...splitRange(v)) : []);
+  function rangeLabel(v) {
+    const [a, b] = splitRange(v); const mo = (x) => Number(x.slice(5));
+    if (a === b) return `${mo(a)}월분`;
+    if (a.slice(0, 4) === b.slice(0, 4)) return `${mo(a)}~${mo(b)}월분`;
+    return `${a.slice(2).replace("-", ".")}~${b.slice(2).replace("-", ".")}분`;
+  }
   const store = {
     get: (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
     set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
@@ -499,21 +530,66 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
     $("fMemberLabel").textContent = t === "in" ? "입금한 사람" : "사용한 사람";
     syncMonthField();
   }
-  function syncMonthField() { $("fMonthWrap").hidden = !(formType === "in" && $("fCat").value === "회비"); }
+  // 여러 줄 입력: 줄마다 기록이 하나씩 저장된다
+  let lines = [];
+  let editingId = null;
+  const isDuesForm = () => formType === "in" && $("fCat").value === "회비";
+  const nextMonth = (mo) => { let [y, m] = (mo || thisMonth()).split("-").map(Number); m++; if (m > 12) { m = 1; y++; } return `${y}-${pad(m)}`; };
+  function syncMonthField() { renderLines(); }
+  function renderLines() {
+    const dues = isDuesForm(); const box = $("lines"); box.innerHTML = "";
+    lines.forEach((ln, i) => {
+      const row = document.createElement("div"); row.className = "line" + (dues ? "" : " no-month");
+      const field = (label, input, cls) => {
+        const f = document.createElement("div"); f.className = "field" + (cls ? " " + cls : "");
+        const l = document.createElement("label"); l.htmlFor = input.id; l.textContent = label;
+        f.append(l, input); return f;
+      };
+      if (dues) {
+        const mo = document.createElement("input"); mo.type = "month"; mo.id = "line-month-" + i; mo.value = ln.month || thisMonth();
+        mo.addEventListener("change", () => { ln.month = mo.value; });
+        row.appendChild(field("회비 월", mo));
+      }
+      const amt = document.createElement("input"); amt.type = "text"; amt.inputMode = "numeric"; amt.id = "line-amount-" + i;
+      amt.placeholder = "10,000"; amt.value = ln.amount ? ln.amount.toLocaleString("ko-KR") : "";
+      amt.addEventListener("input", () => { ln.amount = parseAmt(amt.value); amt.value = ln.amount ? ln.amount.toLocaleString("ko-KR") : ""; updateTotal(); });
+      row.appendChild(field("금액 (원)", amt));
+      const memo = document.createElement("input"); memo.type = "text"; memo.id = "line-memo-" + i; memo.maxLength = 80;
+      memo.placeholder = dues ? "메모 (선택)" : "예: 할머니 생신 케이크"; memo.value = ln.memo || "";
+      memo.addEventListener("input", () => { ln.memo = memo.value; });
+      row.appendChild(field("적요", memo, "memo-field"));
+      const rm = document.createElement("button"); rm.type = "button"; rm.className = "x"; rm.textContent = "×";
+      rm.setAttribute("aria-label", `${i + 1}번째 줄 지우기`); rm.disabled = lines.length === 1;
+      rm.addEventListener("click", () => { lines.splice(i, 1); renderLines(); });
+      row.appendChild(rm);
+      box.appendChild(row);
+    });
+    $("addLine").hidden = !!editingId;
+    updateTotal();
+  }
+  function updateTotal() {
+    const sum = lines.reduce((s, l) => s + (l.amount || 0), 0);
+    $("linesTotal").textContent = lines.length > 1 ? `${lines.length}줄 · 합계 ${won(sum)}` : "";
+  }
+  $("addLine").addEventListener("click", () => {
+    if (lines.length >= 36) { toast("한 번에 36줄까지 기록할 수 있어요."); return; }
+    const last = lines[lines.length - 1] || {};
+    lines.push(isDuesForm() ? { month: nextMonth(last.month), amount: last.amount || 0, memo: "" } : { amount: 0, memo: "" });
+    renderLines();
+    const i = lines.length - 1; const el = $(isDuesForm() ? "line-month-" + i : "line-amount-" + i); if (el) el.focus();
+  });
   $("typeIn").addEventListener("click", () => setType("in"));
   $("typeOut").addEventListener("click", () => setType("out"));
   $("fCat").addEventListener("change", syncMonthField);
-  $("fAmount").addEventListener("input", (e) => { const n = parseAmt(e.target.value); e.target.value = n ? n.toLocaleString("ko-KR") : ""; });
 
-  let editingId = null;
   function openForm(preset = {}, id = null) {
     editingId = id;
     $("formTitle").textContent = id ? "거래 수정하기" : "거래 기록하기";
     $("saveTx").textContent = id ? "수정하기" : "기록하기";
+    lines = [{ month: preset.month || thisMonth(), amount: preset.amount || 0, memo: preset.memo || "" }];
     fillMemberSelect();
     setType(preset.type || "in");
     $("fDate").value = preset.date || today();
-    $("fAmount").value = preset.amount ? preset.amount.toLocaleString("ko-KR") : "";
     if (preset.category) {
       if (![...$("fCat").options].some((o) => o.value === preset.category)) {
         const o = document.createElement("option"); o.value = o.textContent = preset.category; $("fCat").appendChild(o);
@@ -521,12 +597,10 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
       $("fCat").value = preset.category;
     }
     $("fMember").value = preset.memberId || "";
-    $("fMonth").value = preset.month || thisMonth();
-    $("fMemo").value = preset.memo || "";
     $("formErr").hidden = true;
-    syncMonthField();
+    renderLines();
     const dlg = $("txDialog"); if (!dlg.open) dlg.showModal();
-    $("fAmount").focus();
+    $("line-amount-0").focus();
   }
   $("openForm").addEventListener("click", () => openForm());
   const closeForm = () => $("txDialog").close();
@@ -536,24 +610,30 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
 
   $("txForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const amount = parseAmt($("fAmount").value);
     const err = $("formErr");
-    if (!amount) { err.textContent = "금액을 입력해 주세요."; err.hidden = false; return; }
-    if (!$("fDate").value) { err.textContent = "날짜를 골라 주세요."; err.hidden = false; return; }
+    const fail = (msg) => { err.textContent = msg; err.hidden = false; };
+    if (!$("fDate").value) return fail("날짜를 골라 주세요.");
     const category = $("fCat").value;
-    const isDues = formType === "in" && category === "회비";
-    if (isDues && !$("fMember").value) { err.textContent = "회비는 입금한 사람을 골라 주세요."; err.hidden = false; return; }
-    const tx = {
-      date: $("fDate").value, type: formType, amount, category,
-      memberId: $("fMember").value || null,
-      month: isDues ? ($("fMonth").value || thisMonth()) : null,
-      memo: $("fMemo").value.trim(),
-    };
+    const dues = isDuesForm();
+    if (dues && !$("fMember").value) return fail("회비는 입금한 사람을 골라 주세요.");
+    const empty = lines.findIndex((l) => !l.amount);
+    if (empty >= 0) return fail(lines.length > 1 ? `${empty + 1}번째 줄의 금액을 입력해 주세요.` : "금액을 입력해 주세요.");
+    if (dues) {
+      const ms = lines.map((l) => l.month || thisMonth());
+      const dup = ms.find((m, i) => ms.indexOf(m) !== i);
+      if (dup) return fail(`${Number(dup.slice(5))}월이 두 줄에 들어 있어요. 확인해 주세요.`);
+    }
+    const base = { date: $("fDate").value, type: formType, category, memberId: $("fMember").value || null };
+    const txList = lines.map((l) => ({ ...base, amount: l.amount, month: dues ? (l.month || thisMonth()) : null, memo: (l.memo || "").trim() }));
+    const sum = txList.reduce((s, t) => s + t.amount, 0);
     const editing = editingId;
     $("saveTx").disabled = true; $("saveTx").textContent = editing ? "수정 중…" : "기록 중…";
+    const msg = formType === "in" ? `꿀꿀! ${won(sum)}이 저금통에 들어왔어요.` : `${won(sum)} 출금을 기록했어요.`;
     const ok = editing
-      ? await write("updateTx", { id: editing, tx }, "기록을 수정했어요.")
-      : await write("addTx", { tx }, formType === "in" ? `꿀꿀! ${won(amount)}이 저금통에 들어왔어요.` : `${won(amount)} 출금을 기록했어요.`);
+      ? await write("updateTx", { id: editing, tx: txList[0] }, "기록을 수정했어요.")
+      : txList.length === 1
+        ? await write("addTx", { tx: txList[0] }, msg)
+        : await write("addTxs", { txs: txList }, `${txList.length}줄 기록 · ${msg}`);
     $("saveTx").disabled = false; $("saveTx").textContent = editing ? "수정하기" : "기록하기";
     if (ok) { closeForm(); if (!editing && formType === "in") dropCoin(); }
   });
@@ -564,8 +644,8 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
     return [...txs].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt || 0) - (b.createdAt || 0)));
   }
   function duesPaid(memberId, month) {
-    return txs.filter((t) => t.type === "in" && t.category === "회비" && t.memberId === memberId && t.month === month)
-      .reduce((s, t) => s + t.amount, 0);
+    return txs.filter((t) => t.type === "in" && t.category === "회비" && t.memberId === memberId && t.month)
+      .reduce((s, t) => { const ms = monthsOf(t.month); return ms.includes(month) ? s + t.amount / ms.length : s; }, 0);
   }
 
   // ---------- 기간 ----------
@@ -654,7 +734,7 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
       const sTd = document.createElement("td");
       const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = t.category; sTd.appendChild(chip);
       const who = memberName(t.memberId);
-      const label = t.category === "회비" && t.month ? `${who || "?"} ${Number(t.month.slice(5))}월분` : who;
+      const label = t.category === "회비" && t.month ? `${who || "?"} ${rangeLabel(t.month)}` : who;
       if (label) sTd.append(label);
       if (t.memo) { const mm = document.createElement("div"); mm.className = "memo"; mm.textContent = t.memo; sTd.appendChild(mm); }
       const oTd = document.createElement("td"); oTd.className = "r num out"; oTd.textContent = t.type === "out" ? t.amount.toLocaleString("ko-KR") : "";
@@ -708,10 +788,10 @@ dialog.modal .sheet { box-shadow: 0 18px 48px color-mix(in srgb, #4a2b35 25%, tr
         const td = document.createElement("td"); const paid = duesPaid(mb.id, mo);
         const b = document.createElement("button"); b.type = "button"; b.className = "cell num";
         if (due && paid >= due) { b.classList.add("paid"); b.textContent = "완료"; b.title = won(paid); }
-        else if (paid > 0) { b.classList.add("part"); b.textContent = (paid / 10000).toLocaleString("ko-KR") + "만"; b.title = `${won(paid)} / ${won(due)}`; }
+        else if (paid > 0) { b.classList.add("part"); b.textContent = (Math.round(paid) / 10000).toLocaleString("ko-KR", { maximumFractionDigits: 1 }) + "만"; b.title = `${won(paid)} / ${won(due)}`; }
         else { b.classList.add("unpaid"); b.textContent = "미납"; }
         b.setAttribute("aria-label", `${mb.name} ${mo} 회비 ${b.textContent}`);
-        const remain = Math.max(due - paid, 0);
+        const remain = Math.max(Math.round(due - paid), 0);
         b.disabled = !!(due && paid >= due);
         b.addEventListener("click", () => openForm({ type: "in", category: "회비", memberId: mb.id, month: mo, amount: remain || due }));
         td.appendChild(b); tr.appendChild(td);

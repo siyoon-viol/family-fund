@@ -21,6 +21,7 @@ export default {
       switch (req.action) {
         case "load": break;
         case "addTx": await addTx(env.DB, req.tx); break;
+        case "addTxs": await addTxs(env.DB, req.txs); break;
         case "updateTx": await updateTx(env.DB, req.id, req.tx); break;
         case "deleteTx": await env.DB.prepare("DELETE FROM tx WHERE id = ?").bind(String(req.id || "")).run(); break;
         case "saveSettings": await saveSettings(env.DB, req.settings); break;
@@ -81,9 +82,21 @@ function cleanTx(t) {
     category: String(t.category || "기타").slice(0, 20),
     amount,
     memberId: t.memberId ? String(t.memberId).slice(0, 20) : null,
-    month: typeof t.month === "string" && /^\d{4}-\d{2}$/.test(t.month) ? t.month : null,
+    month: cleanMonth(t.month),
     memo: String(t.memo || "").slice(0, 80),
   };
+}
+
+// 회비 월: "YYYY-MM" 한 달, 또는 "YYYY-MM~YYYY-MM" 여러 달 (최대 36개월)
+function cleanMonth(v) {
+  if (typeof v !== "string") return null;
+  const m = v.match(/^(\d{4}-(?:0[1-9]|1[0-2]))(?:~(\d{4}-(?:0[1-9]|1[0-2])))?$/);
+  if (!m) return null;
+  const a = m[1], b = m[2] || a;
+  if (b < a) throw new InputError("회비 끝 월이 시작 월보다 빠릅니다.");
+  const n = (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + (Number(b.slice(5)) - Number(a.slice(5))) + 1;
+  if (n > 36) throw new InputError("회비는 한 번에 36개월까지 기록할 수 있어요.");
+  return a === b ? a : `${a}~${b}`;
 }
 
 async function addTx(db, t) {
@@ -91,6 +104,15 @@ async function addTx(db, t) {
   await db.prepare(
     "INSERT INTO tx (id, date, type, category, amount, member_id, month, memo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(crypto.randomUUID(), c.date, c.type, c.category, c.amount, c.memberId, c.month, c.memo, Date.now()).run();
+}
+
+async function addTxs(db, list) {
+  if (!Array.isArray(list) || list.length < 1 || list.length > 36) throw new InputError("한 번에 1~36줄까지 기록할 수 있어요.");
+  const rows = list.map(cleanTx);
+  const now = Date.now();
+  await db.batch(rows.map((c, i) => db.prepare(
+    "INSERT INTO tx (id, date, type, category, amount, member_id, month, memo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).bind(crypto.randomUUID(), c.date, c.type, c.category, c.amount, c.memberId, c.month, c.memo, now + i)));
 }
 
 async function updateTx(db, id, t) {
